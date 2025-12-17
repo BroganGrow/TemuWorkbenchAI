@@ -142,7 +142,7 @@ export function DropZone() {
       <Card
         style={{
           marginBottom: '24px',
-          border: isDragging ? '2px dashed #1890ff' : '2px dashed #434343',
+          border: isDragging ? '2px dashed #fd7a45' : '2px dashed #434343',
           background: isDragging ? 'rgba(24, 144, 255, 0.05)' : '#1f1f1f',
           transition: 'all 0.3s ease',
           cursor: 'pointer'
@@ -156,7 +156,7 @@ export function DropZone() {
           <InboxOutlined
             style={{
               fontSize: '64px',
-              color: isDragging ? '#1890ff' : '#8c8c8c',
+              color: isDragging ? '#fd7a45' : '#8c8c8c',
               marginBottom: '16px',
               transition: 'all 0.3s ease'
             }}
@@ -263,7 +263,7 @@ export function DropZone() {
                         justifyContent: 'center'
                       }}
                     >
-                      <FileImageOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+                      <FileImageOutlined style={{ fontSize: '24px', color: '#fd7a45' }} />
                     </div>
                   }
                   title={

@@ -41,6 +41,32 @@ code {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #595959;
+  background: #fd7a45;
 }
 
+/* 优化侧边栏菜单选中样式 */
+.ant-menu-dark .ant-menu-item-selected {
+  background: rgba(253, 122, 69, 0.15) !important;
+  border-right: 3px solid #fd7a45;
+}
+
+.ant-menu-dark .ant-menu-item-selected::after {
+  border-right: none !important;
+}
+
+.ant-menu-dark .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.ant-menu-dark .ant-menu-item {
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+/* 优化菜单项内边距 */
+.ant-menu-inline .ant-menu-item {
+  padding-left: 24px !important;
+}
+
+.ant-menu-inline-collapsed .ant-menu-item {
+  padding-left: 16px !important;
+}

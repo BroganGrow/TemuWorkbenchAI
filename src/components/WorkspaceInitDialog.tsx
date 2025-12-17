@@ -46,7 +46,7 @@ export function WorkspaceInitDialog({
         dataSource={STANDARD_CATEGORIES}
         renderItem={(item) => (
           <List.Item>
-            <FolderOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
+            <FolderOutlined style={{ marginRight: '8px', color: '#fd7a45' }} />
             <Text code>{item}</Text>
             <span style={{ marginLeft: '8px', color: '#8c8c8c' }}>
               {getCategoryDescription(item)}

@@ -76,7 +76,7 @@ export function ResizableSider({
           transition: 'background 0.2s'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = '#1890ff';
+          e.currentTarget.style.background = '#fd7a45';
         }}
         onMouseLeave={(e) => {
           if (!isResizing) {

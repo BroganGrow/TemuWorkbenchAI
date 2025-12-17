@@ -1,121 +1,53 @@
-# 构建资源目录
+# 图标文件说明
 
-此目录包含应用打包所需的资源文件。
+本目录包含应用的图标资源。
 
-## 📁 必需文件
+## 文件清单
 
-### 图标文件
+- `icon.png.svg` - 高清 SVG 源文件（用于生成各种尺寸）
+- `icon.png` - 1024x1024 主图标（打包时使用）
+- `icon.ico` - Windows 图标（打包时自动生成）
+- `icon.icns` - macOS 图标（打包时自动生成）
 
-请在此目录放置以下图标文件：
+## Logo 设计说明
 
-#### 1. icon.png
-- **尺寸**: 512x512 像素
-- **格式**: PNG
-- **用途**: 通用图标，Linux AppImage
+**设计元素：** 字母 "T"
+**主色调：** #fd7a45（橙红色）
+**风格：** 现代、简洁、扁平化
 
-#### 2. icon.ico  
-- **尺寸**: 256x256 像素（推荐包含多个尺寸）
-- **格式**: ICO
-- **用途**: Windows 应用图标、安装程序图标
+### 标题栏 Logo
+- 位置：`public/logo.svg`
+- 尺寸：32x32px
+- 显示位置：窗口左上角
 
-#### 3. icon.icns
-- **尺寸**: 512x512 像素
-- **格式**: ICNS
-- **用途**: macOS 应用图标
+### 应用图标
+- 位置：`build/icon.png`
+- 尺寸：1024x1024px
+- 用途：打包时生成各平台图标
 
-## 🎨 图标设计建议
+## 生成图标
 
-### 设计要点
-- 简洁明了，易于识别
-- 在小尺寸下清晰可见
-- 使用品牌颜色
-- 避免过多细节
-
-### 推荐尺寸
-- 16x16
-- 32x32
-- 48x48
-- 64x64
-- 128x128
-- 256x256
-- 512x512
-- 1024x1024
-
-## 🛠️ 图标制作工具
-
-### 在线工具
-1. **Favicon.io** - https://favicon.io/
-   - 免费，快速生成多种格式
-
-2. **IcoConverter** - https://www.icoconverter.com/
-   - PNG 转 ICO/ICNS
-
-3. **CloudConvert** - https://cloudconvert.com/
-   - 支持多种格式转换
-
-### 桌面软件
-1. **GIMP** (免费)
-   - 跨平台图像编辑器
-   - 支持 ICO 导出
-
-2. **IcoFX** (Windows)
-   - 专业图标编辑软件
-
-3. **Image2icon** (macOS)
-   - Mac 图标制作工具
-
-### 命令行工具 (macOS)
-
-从 PNG 创建 ICNS：
+如果需要重新生成不同尺寸的图标，请运行：
 
 ```bash
-# 创建临时目录
-mkdir icon.iconset
-
-# 生成各种尺寸
-sips -z 16 16     icon.png --out icon.iconset/icon_16x16.png
-sips -z 32 32     icon.png --out icon.iconset/icon_16x16@2x.png
-sips -z 32 32     icon.png --out icon.iconset/icon_32x32.png
-sips -z 64 64     icon.png --out icon.iconset/icon_32x32@2x.png
-sips -z 128 128   icon.png --out icon.iconset/icon_128x128.png
-sips -z 256 256   icon.png --out icon.iconset/icon_128x128@2x.png
-sips -z 256 256   icon.png --out icon.iconset/icon_256x256.png
-sips -z 512 512   icon.png --out icon.iconset/icon_256x256@2x.png
-sips -z 512 512   icon.png --out icon.iconset/icon_512x512.png
-sips -z 1024 1024 icon.png --out icon.iconset/icon_512x512@2x.png
-
-# 转换为 ICNS
-iconutil -c icns icon.iconset
-
-# 清理
-rm -rf icon.iconset
+npm install sharp --save-dev
+npm run generate-icons
 ```
 
-## 📄 其他文件
+这将从 SVG 源文件生成所有需要的 PNG 图标。
 
-### installer.nsh
-NSIS 安装程序自定义脚本（Windows）
+## 自定义图标
 
-### entitlements.mac.plist
-macOS 应用权限配置文件
+如需更换图标：
 
-## ⚠️ 注意事项
+1. 替换 `build/icon.png.svg` 为新的 SVG 设计
+2. 替换 `public/logo.svg` 为新的标题栏 logo
+3. 运行 `npm run generate-icons` 重新生成图标
+4. 重新打包应用
 
-1. **版权**: 确保使用的图标拥有合法授权
-2. **质量**: 使用高分辨率源文件
-3. **格式**: 严格按照要求的格式和尺寸
-4. **测试**: 打包后检查图标显示效果
+## 注意事项
 
-## 🎯 快速开始
-
-如果你暂时没有图标，可以使用占位图标：
-
-1. 创建一个简单的 512x512 PNG 图标
-2. 使用在线工具转换为其他格式
-3. 放置到此目录
-4. 运行打包命令测试
-
----
-
-**准备好图标后，运行 `npm run build:win` 进行打包！**
-
+- SVG 文件应使用透明背景
+- 图标设计应简洁明了，小尺寸下依然清晰
+- 建议图标边缘留 5-10% 空白
+- electron-builder 会在打包时自动处理图标转换

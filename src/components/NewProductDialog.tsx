@@ -213,7 +213,7 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
           marginTop: '8px', 
           fontFamily: 'monospace',
           wordBreak: 'break-all',
-          color: '#1890ff'
+          color: '#fd7a45'
         }}>
           {preview}
         </div>

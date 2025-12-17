@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, nativeImage } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
@@ -25,6 +25,20 @@ let mainWindow: BrowserWindow | null = null;
 
 // 创建主窗口
 function createWindow() {
+  // 设置应用图标
+  let appIcon;
+  const iconPath = path.join(__dirname, '../build/icon.png');
+  const iconSvgPath = path.join(__dirname, '../build/icon.svg');
+  
+  // 优先使用 PNG，如果不存在则使用 SVG
+  if (fs.existsSync(iconPath)) {
+    appIcon = nativeImage.createFromPath(iconPath);
+  } else if (fs.existsSync(iconSvgPath)) {
+    // 从 SVG 创建图标（Electron 支持）
+    const svgContent = fs.readFileSync(iconSvgPath, 'utf-8');
+    appIcon = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svgContent).toString('base64')}`);
+  }
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -32,6 +46,7 @@ function createWindow() {
     minHeight: 700,
     title: '',
     frame: false, // 使用无边框窗口，自定义标题栏
+    icon: appIcon, // 设置窗口图标
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

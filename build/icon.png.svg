@@ -1,0 +1,27 @@
+<!-- 方块化 T 字母 Logo - 应用图标版本 1024x1024 -->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 渐变背景 -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff8c5a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fd7a45;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 阴影效果 -->
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- 圆润背景 - 放大版 -->
+  <path d="M512 64 C208 64 64 208 64 512 C64 816 208 960 512 960 C816 960 960 816 960 512 C960 208 816 64 512 64 Z" 
+        fill="url(#bgGradient)" 
+        filter="url(#shadow)"/>
+  
+  <!-- 白色方块组成的 T - 放大版 -->
+  <rect x="272" y="272" width="128" height="128" rx="32" fill="white" opacity="0.95"/>
+  <rect x="448" y="272" width="128" height="128" rx="32" fill="white" opacity="0.95"/>
+  <rect x="624" y="272" width="128" height="128" rx="32" fill="white" opacity="0.95"/>
+  <rect x="448" y="448" width="128" height="128" rx="32" fill="white" opacity="0.95"/>
+  <rect x="448" y="624" width="128" height="128" rx="32" fill="white" opacity="0.95"/>
+</svg>

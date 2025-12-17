@@ -71,10 +71,15 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           marginRight: '8px',
           marginLeft: '8px'
         }}>
-          <AppstoreOutlined style={{ 
-            fontSize: '18px', 
-            color: '#1890ff'
-          }} />
+          <img 
+            src="/logo.svg" 
+            alt="Logo" 
+            style={{ 
+              width: '24px', 
+              height: '24px',
+              display: 'block'
+            }} 
+          />
         </div>
         
         {/* 菜单 */}

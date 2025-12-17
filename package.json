@@ -23,28 +23,30 @@
     "build:dir": "npm run build -- --dir",
     "preview": "vite preview",
     "postinstall": "electron-builder install-app-deps",
+    "generate-icons": "node scripts/generate-icons.cjs",
+    "create-icon-quick": "node scripts/create-icon-quick.cjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "clean": "rimraf dist dist-electron release"
   },
   "dependencies": {
+    "antd": "^5.12.0",
+    "fs-extra": "^11.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "antd": "^5.12.0",
-    "zustand": "^4.4.7",
-    "fs-extra": "^11.2.0"
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.10.4",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
-    "@types/node": "^20.10.4",
-    "@types/fs-extra": "^11.0.4",
     "@vitejs/plugin-react": "^4.2.1",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
+    "sharp": "^0.34.5",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
     "vite-plugin-electron": "^0.28.1",
     "vite-plugin-electron-renderer": "^0.14.5"
   }
 }
-

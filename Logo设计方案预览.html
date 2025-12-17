@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logo 设计方案预览</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #141414;
+      color: #fff;
+      padding: 40px;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+      font-size: 32px;
+      color: #fd7a45;
+    }
+    
+    .description {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #8c8c8c;
+      font-size: 14px;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .card {
+      background: #1f1f1f;
+      border: 1px solid #303030;
+      border-radius: 12px;
+      padding: 30px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(253, 122, 69, 0.3);
+      border-color: #fd7a45;
+    }
+    
+    .card h2 {
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: #fd7a45;
+    }
+    
+    .card .subtitle {
+      font-size: 14px;
+      color: #8c8c8c;
+      margin-bottom: 20px;
+    }
+    
+    .preview-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+    
+    .preview {
+      text-align: center;
+    }
+    
+    .preview-label {
+      font-size: 12px;
+      color: #8c8c8c;
+      margin-bottom: 10px;
+    }
+    
+    .icon-preview {
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .icon-preview.dark {
+      background: #000;
+    }
+    
+    .icon-preview.light {
+      background: #fff;
+    }
+    
+    .features {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #303030;
+    }
+    
+    .features ul {
+      list-style: none;
+      font-size: 13px;
+      color: #bbb;
+    }
+    
+    .features li {
+      padding: 5px 0;
+      padding-left: 20px;
+      position: relative;
+    }
+    
+    .features li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #52c41a;
+      font-weight: bold;
+    }
+    
+    .instruction {
+      background: #2a2a2a;
+      padding: 30px;
+      border-radius: 12px;
+      margin-top: 40px;
+      border: 1px solid #303030;
+    }
+    
+    .instruction h3 {
+      color: #fd7a45;
+      margin-bottom: 15px;
+    }
+    
+    .instruction code {
+      background: #1f1f1f;
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: #52c41a;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .instruction pre {
+      background: #000;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    
+    .instruction pre code {
+      background: none;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 Logo 设计方案预览</h1>
+  <p class="description">
+    以下是5种不同风格的 "T" 字母设计，主色调均为 #fd7a45<br>
+    点击查看大图，选择您喜欢的风格！
+  </p>
+  
+  <div class="grid">
+    <!-- 风格1 -->
+    <div class="card">
+      <h2>风格 1: 圆润科技风</h2>
+      <p class="subtitle">现代、简约、专业</p>
+      
+      <div class="preview-container">
+        <div class="preview">
+          <div class="preview-label">深色背景</div>
+          <div class="icon-preview dark">
+            <img src="logo-style1.svg" alt="Style 1" width="64" height="64">
+          </div>
+        </div>
+        <div class="preview">
+          <div class="preview-label">浅色背景</div>
+          <div class="icon-preview light">
+            <img src="logo-style1.svg" alt="Style 1" width="64" height="64">
+          </div>
+        </div>
+      </div>
+      
+      <div class="features">
+        <ul>
+          <li>圆角设计，柔和亲切</li>
+          <li>科技感强，现代化</li>
+          <li>适合专业软件</li>
+          <li>装饰圆点增加细节</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- 风格2 -->
+    <div class="card">
+      <h2>风格 2: 手写风格</h2>
+      <p class="subtitle">活泼、创意、动态</p>
+      
+      <div class="preview-container">
+        <div class="preview">
+          <div class="preview-label">深色背景</div>
+          <div class="icon-preview dark">
+            <img src="logo-style2.svg" alt="Style 2" width="64" height="64">
+          </div>
+        </div>
+        <div class="preview">
+          <div class="preview-label">浅色背景</div>
+          <div class="icon-preview light">
+            <img src="logo-style2.svg" alt="Style 2" width="64" height="64">
+          </div>
+        </div>
+      </div>
+      
+      <div class="features">
+        <ul>
+          <li>手绘笔触，富有人情味</li>
+          <li>动态感强，活泼有趣</li>
+          <li>适合创意工具</li>
+          <li>装饰线条增加艺术感</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- 风格3 -->
+    <div class="card">
+      <h2>风格 3: 几何科技风</h2>
+      <p class="subtitle">锐利、前卫、科技</p>
+      
+      <div class="preview-container">
+        <div class="preview">
+          <div class="preview-label">深色背景</div>
+          <div class="icon-preview dark">
+            <img src="logo-style3.svg" alt="Style 3" width="64" height="64">
+          </div>
+        </div>
+        <div class="preview">
+          <div class="preview-label">浅色背景</div>
+          <div class="icon-preview light">
+            <img src="logo-style3.svg" alt="Style 3" width="64" height="64">
+          </div>
+        </div>
+      </div>
+      
+      <div class="features">
+        <ul>
+          <li>多边形设计，棱角分明</li>
+          <li>未来科技感强</li>
+          <li>适合技术类产品</li>
+          <li>装饰三角增加层次</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- 风格4 -->
+    <div class="card">
+      <h2>风格 4: 线条艺术风</h2>
+      <p class="subtitle">简约、优雅、精致</p>
+      
+      <div class="preview-container">
+        <div class="preview">
+          <div class="preview-label">深色背景</div>
+          <div class="icon-preview dark">
+            <img src="logo-style4.svg" alt="Style 4" width="64" height="64">
+          </div>
+        </div>
+        <div class="preview">
+          <div class="preview-label">浅色背景</div>
+          <div class="icon-preview light">
+            <img src="logo-style4.svg" alt="Style 4" width="64" height="64">
+          </div>
+        </div>
+      </div>
+      
+      <div class="features">
+        <ul>
+          <li>纯线条设计，极简主义</li>
+          <li>优雅精致</li>
+          <li>适合高端产品</li>
+          <li>装饰圆点增加节奏感</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- 风格5 -->
+    <div class="card">
+      <h2>风格 5: 立体风格</h2>
+      <p class="subtitle">层次、质感、专业</p>
+      
+      <div class="preview-container">
+        <div class="preview">
+          <div class="preview-label">深色背景</div>
+          <div class="icon-preview dark">
+            <img src="logo-style5.svg" alt="Style 5" width="64" height="64">
+          </div>
+        </div>
+        <div class="preview">
+          <div class="preview-label">浅色背景</div>
+          <div class="icon-preview light">
+            <img src="logo-style5.svg" alt="Style 5" width="64" height="64">
+          </div>
+        </div>
+      </div>
+      
+      <div class="features">
+        <ul>
+          <li>3D效果，立体感强</li>
+          <li>阴影和高光增加质感</li>
+          <li>适合专业工具</li>
+          <li>渐变增加层次感</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- 原始风格 -->
+    <div class="card">
+      <h2>原始风格: 经典方正</h2>
+      <p class="subtitle">传统、稳重、正式</p>
+      
+      <div class="preview-container">
+        <div class="preview">
+          <div class="preview-label">深色背景</div>
+          <div class="icon-preview dark">
+            <img src="logo.svg" alt="Original" width="64" height="64">
+          </div>
+        </div>
+        <div class="preview">
+          <div class="preview-label">浅色背景</div>
+          <div class="icon-preview light">
+            <img src="logo.svg" alt="Original" width="64" height="64">
+          </div>
+        </div>
+      </div>
+      
+      <div class="features">
+        <ul>
+          <li>传统T字母设计</li>
+          <li>方正稳重</li>
+          <li>当前使用的版本</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  
+  <div class="instruction">
+    <h3>📝 如何应用您选择的风格</h3>
+    <p style="margin-bottom: 15px;">选好了吗？告诉我您喜欢哪个风格，我会立即为您应用！</p>
+    
+    <p><strong>方式1：告诉我编号</strong></p>
+    <p>例如："我选择风格3" 或 "用风格4"</p>
+    
+    <p style="margin-top: 20px;"><strong>方式2：描述您想要的感觉</strong></p>
+    <p>例如："我想要更有科技感的" 或 "想要简约一点的"</p>
+    
+    <p style="margin-top: 20px;"><strong>方式3：混搭或自定义</strong></p>
+    <p>例如："把风格4的线条和风格5的立体感结合"</p>
+  </div>
+  
+  <script>
+    // 卡片点击放大效果
+    document.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('click', function() {
+        const img = this.querySelector('img');
+        const style = this.querySelector('h2').textContent;
+        alert('您选择了：' + style + '\n\n请在聊天中告诉我这个选择，我会立即为您应用！');
+      });
+    });
+  </script>
+</body>
+</html>
+
