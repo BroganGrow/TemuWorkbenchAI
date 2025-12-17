@@ -393,6 +393,10 @@ export function FileTree({ onDrop }: FileTreeProps) {
         .file-tree-container .ant-tree-indent {
           flex-shrink: 0 !important;
         }
+        /* 隐藏拖拽图标 */
+        .file-tree-container .ant-tree-draggable-icon {
+          display: none !important;
+        }
       `}</style>
       {treeData.length === 0 ? (
         <div style={{ 
