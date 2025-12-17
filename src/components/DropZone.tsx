@@ -142,8 +142,8 @@ export function DropZone() {
       <Card
         style={{
           marginBottom: '24px',
-          border: isDragging ? '2px dashed #fd7a45' : '2px dashed #434343',
-          background: isDragging ? 'rgba(24, 144, 255, 0.05)' : '#1f1f1f',
+          border: isDragging ? '2px dashed #fd7a45' : '2px dashed var(--border-color)',
+          background: isDragging ? 'rgba(253, 122, 69, 0.05)' : 'var(--card-bg)',
           transition: 'all 0.3s ease',
           cursor: 'pointer'
         }}
@@ -156,7 +156,7 @@ export function DropZone() {
           <InboxOutlined
             style={{
               fontSize: '64px',
-              color: isDragging ? '#fd7a45' : '#8c8c8c',
+              color: isDragging ? '#fd7a45' : 'var(--text-secondary)',
               marginBottom: '16px',
               transition: 'all 0.3s ease'
             }}
@@ -182,7 +182,7 @@ export function DropZone() {
           </Space>
         }
         style={{ marginBottom: '24px' }}
-        styles={{ body: { background: '#1f1f1f' } }}
+        styles={{ body: { background: 'var(--card-bg)' } }}
       >
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <Input
@@ -225,7 +225,7 @@ export function DropZone() {
           )
         }
         style={{ marginBottom: '24px' }}
-        styles={{ body: { background: '#1f1f1f', maxHeight: '400px', overflow: 'auto' } }}
+        styles={{ body: { background: 'var(--card-bg)', maxHeight: '400px', overflow: 'auto' } }}
       >
         {droppedFiles.length === 0 ? (
           <Empty
@@ -256,7 +256,7 @@ export function DropZone() {
                       style={{
                         width: '48px',
                         height: '48px',
-                        background: '#141414',
+                        background: 'var(--bg-tertiary)',
                         borderRadius: '4px',
                         display: 'flex',
                         alignItems: 'center',
@@ -295,7 +295,7 @@ export function DropZone() {
 
       {/* 导入进度 */}
       {isImporting && (
-        <Card style={{ marginBottom: '24px' }} styles={{ body: { background: '#1f1f1f' } }}>
+        <Card style={{ marginBottom: '24px' }} styles={{ body: { background: 'var(--card-bg)' } }}>
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
             <Text strong>正在导入文件...</Text>
             <Progress

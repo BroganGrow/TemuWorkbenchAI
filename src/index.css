@@ -4,6 +4,42 @@
   box-sizing: border-box;
 }
 
+:root {
+  /* 浅色主题 (默认) */
+  --bg-primary: #f5f5f5;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #fafafa;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-active: rgba(0, 0, 0, 0.08);
+  --text-primary: rgba(0, 0, 0, 0.88);
+  --text-secondary: rgba(0, 0, 0, 0.45);
+  --border-color: #f0f0f0;
+  --border-color-split: #f0f0f0;
+  --primary-color: #fd7a45;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+  --scrollbar-track: transparent;
+  --card-bg: #ffffff;
+  --image-preview-bg: #f5f5f5;
+}
+
+[data-theme='dark'] {
+  /* 深色主题 */
+  --bg-primary: #141414;
+  --bg-secondary: #1f1f1f;
+  --bg-tertiary: #141414;
+  --bg-hover: rgba(255, 255, 255, 0.08);
+  --bg-active: rgba(255, 255, 255, 0.12);
+  --text-primary: rgba(255, 255, 255, 0.85);
+  --text-secondary: rgba(255, 255, 255, 0.45);
+  --border-color: #303030;
+  --border-color-split: #303030;
+  --primary-color: #fd7a45;
+  --scrollbar-thumb: #434343;
+  --scrollbar-track: #1f1f1f;
+  --card-bg: #1f1f1f;
+  --image-preview-bg: #000000;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -11,9 +47,9 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #141414;
-  color: rgba(255, 255, 255, 0.85);
   overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 code {
@@ -34,16 +70,16 @@ code {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f1f1f;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #434343;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #fd7a45;
+  background: var(--primary-color);
 }
 
 /* 优化侧边栏菜单选中样式 */
@@ -62,6 +98,13 @@ code {
 
 .ant-menu-dark .ant-menu-item {
   transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+/* 浅色模式下的菜单样式 */
+[data-theme='light'] .ant-layout-sider-light .ant-menu-item-selected {
+  background: rgba(253, 122, 69, 0.1) !important;
+  color: #fd7a45 !important;
+  border-right: 3px solid #fd7a45;
 }
 
 /* 优化菜单项内边距 */
@@ -92,6 +135,7 @@ code {
 /* 确保 Layout 组件不产生溢出 */
 .ant-layout {
   overflow: hidden;
+  background: var(--bg-primary) !important;
 }
 
 .ant-layout-content {
@@ -100,4 +144,9 @@ code {
 
 .ant-layout-sider {
   overflow: hidden;
+  background: var(--bg-secondary) !important;
+}
+
+.ant-layout-sider-children {
+  background: var(--bg-secondary) !important;
 }

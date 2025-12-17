@@ -33,8 +33,8 @@ export function Toolbar({ onNewProduct, onImport }: ToolbarProps) {
   return (
     <div style={{
       padding: '12px 16px',
-      borderBottom: '1px solid #303030',
-      background: '#1f1f1f',
+      background: 'var(--bg-secondary)',
+      borderBottom: '1px solid var(--border-color)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -74,7 +74,7 @@ export function Toolbar({ onNewProduct, onImport }: ToolbarProps) {
         <div style={{ 
           width: '1px', 
           height: '20px', 
-          background: '#434343',
+          background: 'var(--border-color)',
           margin: '0 4px'
         }} />
 

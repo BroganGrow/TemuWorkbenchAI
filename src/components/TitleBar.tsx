@@ -5,9 +5,11 @@ import {
   BorderOutlined, 
   CloseOutlined,
   FolderOpenOutlined,
-  AppstoreOutlined
+  AppstoreOutlined,
+  BgColorsOutlined,
+  CheckOutlined
 } from '@ant-design/icons';
-import { ThemeToggle } from './ThemeToggle';
+import { useAppStore } from '../store/appStore';
 
 interface TitleBarProps {
   rootPath: string;
@@ -23,6 +25,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onCloseFolder 
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
+  const { theme, setTheme } = useAppStore();
 
   useEffect(() => {
     // 检查初始最大化状态
@@ -47,8 +50,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   return (
     <div style={{
       height: '32px',
-      background: '#1f1f1f',
-      borderBottom: '1px solid #303030',
+      background: 'var(--bg-secondary)',
+      borderBottom: '1px solid var(--border-color)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -106,14 +109,14 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                 {
                   key: 'current-folder',
                   label: rootPath ? (
-                    <div style={{ 
-                      maxWidth: '300px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      color: '#8c8c8c',
-                      fontSize: '12px'
-                    }}>
+          <div style={{ 
+            maxWidth: '300px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: 'var(--text-secondary)',
+            fontSize: '12px'
+          }}>
                       当前: {rootPath}
                     </div>
                   ) : '未打开文件夹',
@@ -123,6 +126,42 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             },
             { key: 'edit', label: '编辑' },
             { key: 'view', label: '查看' },
+            { 
+              key: 'theme', 
+              label: '主题',
+              children: [
+                {
+                  key: 'theme-light',
+                  label: (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: '120px' }}>
+                      <span>浅色</span>
+                      {theme === 'light' && <CheckOutlined style={{ color: '#fd7a45' }} />}
+                    </div>
+                  ),
+                  onClick: () => setTheme('light')
+                },
+                {
+                  key: 'theme-dark',
+                  label: (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: '120px' }}>
+                      <span>深色</span>
+                      {theme === 'dark' && <CheckOutlined style={{ color: '#fd7a45' }} />}
+                    </div>
+                  ),
+                  onClick: () => setTheme('dark')
+                },
+                {
+                  key: 'theme-system',
+                  label: (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: '120px' }}>
+                      <span>跟随系统</span>
+                      {theme === 'system' && <CheckOutlined style={{ color: '#fd7a45' }} />}
+                    </div>
+                  ),
+                  onClick: () => setTheme('system')
+                }
+              ]
+            },
             { key: 'help', label: '帮助' }
           ]}
           style={{ 
@@ -148,8 +187,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           gap: '12px',
           marginRight: '12px'
         }}>
-          <ThemeToggle />
-          <span style={{ fontSize: '11px', color: '#8c8c8c' }}>v{appVersion}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>v{appVersion}</span>
         </div>
 
         {/* 窗口控制按钮 */}
@@ -164,17 +202,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               height: '100%',
               border: 'none',
               background: 'transparent',
-              color: '#fff',
+              color: 'var(--text-primary)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'background 0.2s'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
           >
-            <MinusOutlined style={{ fontSize: '12px' }} />
+            <MinusOutlined style={{ fontSize: '12px', color: 'var(--text-primary)' }} />
           </button>
           
           <button
@@ -184,17 +222,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               height: '100%',
               border: 'none',
               background: 'transparent',
-              color: '#fff',
+              color: 'var(--text-primary)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'background 0.2s'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
           >
-            <BorderOutlined style={{ fontSize: '10px' }} />
+            <BorderOutlined style={{ fontSize: '10px', color: 'var(--text-primary)' }} />
           </button>
           
           <button
@@ -204,17 +242,25 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               height: '100%',
               border: 'none',
               background: 'transparent',
-              color: '#fff',
+              color: 'var(--text-primary)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'background 0.2s'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#e81123'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#e81123';
+              const icon = e.currentTarget.querySelector('.anticon');
+              if (icon) (icon as HTMLElement).style.color = '#fff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              const icon = e.currentTarget.querySelector('.anticon');
+              if (icon) (icon as HTMLElement).style.color = 'var(--text-primary)';
+            }}
           >
-            <CloseOutlined style={{ fontSize: '12px' }} />
+            <CloseOutlined style={{ fontSize: '12px', color: 'var(--text-primary)' }} />
           </button>
         </div>
       </div>

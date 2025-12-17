@@ -53,8 +53,7 @@ export function ResizableSider({
       style={{
         width: `${width}px`,
         height: '100%',
-        background: '#1f1f1f',
-        borderRight: '1px solid #303030',
+        borderRight: '1px solid var(--border-color)',
         position: 'relative',
         flexShrink: 0
       }}

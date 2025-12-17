@@ -195,8 +195,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
       {/* 工具栏 - Android Studio 风格 */}
       <div style={{
         padding: '4px 8px',
-        borderBottom: '1px solid #303030',
-        background: '#1f1f1f',
+        borderBottom: '1px solid var(--border-color)',
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
@@ -217,7 +216,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: selectedProduct ? '#8c8c8c' : '#434343',
+              color: selectedProduct ? 'var(--text-secondary)' : 'var(--text-disabled)',
               background: 'transparent'
             }}
           />
@@ -227,7 +226,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
         <div style={{ 
           width: '1px', 
           height: '20px', 
-          background: '#434343',
+          background: 'var(--border-color)',
           margin: '0 2px'
         }} />
 
@@ -250,7 +249,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#8c8c8c',
+              color: 'var(--text-secondary)',
               background: 'transparent'
             }}
           />
@@ -275,7 +274,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#8c8c8c',
+              color: 'var(--text-secondary)',
               background: 'transparent'
             }}
           />
@@ -325,7 +324,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
         <div style={{ 
           textAlign: 'center', 
           padding: '48px 16px',
-          color: '#8c8c8c'
+          color: 'var(--text-secondary)'
         }}>
           <FolderOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
           <div>当前分类下暂无产品</div>
@@ -347,7 +346,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
           onDrop={onDrop}
           style={{
             background: 'transparent',
-            color: '#fff'
+            color: 'var(--text-primary)'
           }}
           titleRender={(node) => (
             <Dropdown

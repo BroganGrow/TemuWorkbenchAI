@@ -30,8 +30,8 @@ export interface AppState {
   selectedProduct: string | null;
   // 选中的子文件夹
   selectedFolder: string | null;
-  // 主题
-  theme: 'light' | 'dark';
+  // 主题设置
+  theme: 'light' | 'dark' | 'system';
   // 根目录路径
   rootPath: string;
   // 产品列表
@@ -51,7 +51,7 @@ export interface AppState {
   setCurrentCategory: (category: string) => void;
   setSelectedProduct: (product: string | null, recordHistory?: boolean) => void;
   setSelectedFolder: (folder: string | null, recordHistory?: boolean) => void;
-  toggleTheme: () => void;
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setRootPath: (path: string) => void;
   setProducts: (products: ProductNode[]) => void;
   addProduct: (product: ProductNode) => void;
@@ -139,7 +139,7 @@ export const useAppStore = create<AppState>()(
         return newState;
       }),
       
-      toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+      setTheme: (theme) => set({ theme }),
       
       setRootPath: (path) => set({ rootPath: path, history: [], historyIndex: -1 }),
       

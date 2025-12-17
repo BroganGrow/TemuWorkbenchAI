@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { ipcMain, dialog } from 'electron';
 import fs from 'fs-extra';
 import path from 'path';
 // 修复：返回文件夹和文件
@@ -443,33 +443,6 @@ export function registerIpcHandlers() {
         error: (error as Error).message
       };
     }
-  });
-
-  // 窗口控制 handlers
-  ipcMain.on('window-minimize', () => {
-    const win = BrowserWindow.getFocusedWindow();
-    if (win) win.minimize();
-  });
-
-  ipcMain.on('window-maximize', () => {
-    const win = BrowserWindow.getFocusedWindow();
-    if (win) {
-      if (win.isMaximized()) {
-        win.unmaximize();
-      } else {
-        win.maximize();
-      }
-    }
-  });
-
-  ipcMain.on('window-close', () => {
-    const win = BrowserWindow.getFocusedWindow();
-    if (win) win.close();
-  });
-
-  ipcMain.handle('window-is-maximized', () => {
-    const win = BrowserWindow.getFocusedWindow();
-    return win ? win.isMaximized() : false;
   });
 }
 

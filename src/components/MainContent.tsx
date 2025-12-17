@@ -254,7 +254,7 @@ export function MainContent() {
     } else if (textExts.includes(ext || '')) {
       return <FileTextOutlined style={{ fontSize: '40px', color: '#1890ff' }} />;
     } else {
-      return <FileOutlined style={{ fontSize: '40px', color: '#8c8c8c' }} />;
+      return <FileOutlined style={{ fontSize: '40px', color: 'var(--text-secondary)' }} />;
     }
   };
 
@@ -502,7 +502,7 @@ export function MainContent() {
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description="请从左侧选择一个产品"
-          style={{ color: '#8c8c8c' }}
+          style={{ color: 'var(--text-secondary)' }}
         />
       </div>
     );
@@ -518,7 +518,7 @@ export function MainContent() {
       }}>
         <Empty
           description="产品不存在"
-          style={{ color: '#8c8c8c' }}
+          style={{ color: 'var(--text-secondary)' }}
         />
       </div>
     );
@@ -550,7 +550,7 @@ export function MainContent() {
         }}
         styles={{ 
           body: { 
-            background: '#1f1f1f',
+            background: 'var(--card-bg)',
             overflow: 'auto'
           } 
         }}
@@ -575,8 +575,8 @@ export function MainContent() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FolderOpenOutlined style={{ color: '#8c8c8c' }} />
-            <span style={{ color: '#8c8c8c', fontSize: '12px' }}>路径：</span>
+            <FolderOpenOutlined style={{ color: 'var(--text-secondary)' }} />
+            <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>路径：</span>
             <Tooltip title={selectedProductData.path}>
               <span style={{ 
                 fontSize: '12px',
@@ -590,8 +590,8 @@ export function MainContent() {
             </Tooltip>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CalendarOutlined style={{ color: '#8c8c8c' }} />
-            <span style={{ color: '#8c8c8c', fontSize: '12px' }}>创建时间：</span>
+            <CalendarOutlined style={{ color: 'var(--text-secondary)' }} />
+            <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>创建时间：</span>
             <span style={{ fontSize: '12px' }}>
               {formatDate(selectedProductData.createdAt)}
             </span>
@@ -601,7 +601,7 @@ export function MainContent() {
           <div style={{ 
             marginTop: '12px',
             paddingTop: '12px',
-            borderTop: '1px solid #303030'
+            borderTop: '1px solid var(--border-color)'
           }}>
             <div style={{ 
               display: 'flex', 
@@ -611,7 +611,7 @@ export function MainContent() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileMarkdownOutlined style={{ color: '#fd7a45' }} />
-                <span style={{ color: '#8c8c8c', fontSize: '12px' }}>产品信息</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>产品信息</span>
                 {isEditingGoodsInfo && (
                   <Tag color="green" style={{ fontSize: '10px', padding: '0 6px', lineHeight: '18px' }}>
                     编辑中
@@ -656,26 +656,26 @@ export function MainContent() {
                   placeholder="点击输入产品信息... 支持 Markdown 格式，自动保存"
                   autoSize={{ minRows: 3, maxRows: 8 }}
                   style={{
-                    background: '#141414',
-                    border: '1px solid #303030',
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '4px',
                     fontSize: '12px',
                     lineHeight: '1.6',
-                    color: '#d9d9d9',
+                    color: 'var(--text-primary)',
                     resize: 'none',
                     maxHeight: '200px',
                     overflowY: 'auto'
                   }}
                   styles={{
                     textarea: {
-                      color: '#d9d9d9'
+                      color: 'var(--text-primary)'
                     }
                   }}
                 />
               </div>
               <div style={{ 
                 fontSize: '11px', 
-                color: '#8c8c8c', 
+                color: 'var(--text-secondary)', 
                 marginTop: '4px',
                 textAlign: 'right'
               }}>
@@ -710,7 +710,7 @@ export function MainContent() {
               body: { 
                 background: dragOverFolder === selectedFolder 
                   ? 'rgba(253, 122, 69, 0.08)' 
-                  : '#1f1f1f',
+                  : 'var(--card-bg)',
                 overflow: 'auto',
                 height: '100%',
                 border: dragOverFolder === selectedFolder 
@@ -720,7 +720,7 @@ export function MainContent() {
               } 
             }}
             extra={
-              <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                 {files.length} 个文件
               </span>
             }
@@ -730,17 +730,17 @@ export function MainContent() {
               flexDirection: 'column',
               border: dragOverFolder === selectedFolder 
                 ? '2px dashed #fd7a45' 
-                : '1px solid #434343'
+                : '1px solid var(--border-color)'
             }}
           >
           <Spin spinning={loading || importing}>
             {files.length === 0 ? (
               <Empty
-                image={<FileImageOutlined style={{ fontSize: '64px', color: dragOverFolder === selectedFolder ? '#fd7a45' : '#8c8c8c' }} />}
+                image={<FileImageOutlined style={{ fontSize: '64px', color: dragOverFolder === selectedFolder ? '#fd7a45' : 'var(--text-secondary)' }} />}
                 description={
                   <div>
                     <div>文件夹为空</div>
-                    <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: '8px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
                       拖拽文件到这里导入
                     </div>
                   </div>
@@ -790,14 +790,14 @@ export function MainContent() {
                     ]}
                     style={{
                       padding: '12px 0',
-                      borderBottom: '1px solid #303030'
+                      borderBottom: '1px solid var(--border-color)'
                     }}
                   >
                     <List.Item.Meta
                       avatar={getFileIcon(file.name)}
                       title={
                         <div style={{ 
-                          color: '#fff',
+                          color: 'var(--text-primary)',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
@@ -833,7 +833,7 @@ export function MainContent() {
                       isImageFile(file.name) ? (
                         <div style={{
                           height: '150px',
-                          background: '#000',
+                          background: 'var(--bg-tertiary)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -855,7 +855,7 @@ export function MainContent() {
                       ) : (
                         <div style={{
                           height: '150px',
-                          background: '#141414',
+                          background: 'var(--bg-tertiary)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center'
@@ -873,7 +873,8 @@ export function MainContent() {
                       </Tooltip>
                     ]}
                     style={{
-                      background: '#141414'
+                      background: 'var(--card-bg)',
+                      borderColor: 'var(--border-color)'
                     }}
                   >
                     <Card.Meta
@@ -890,7 +891,7 @@ export function MainContent() {
                         </Tooltip>
                       }
                       description={
-                        <div style={{ fontSize: '11px', color: '#8c8c8c' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                           {formatFileSize(file.size)}
                         </div>
                       }
@@ -908,7 +909,7 @@ export function MainContent() {
             title="标准文件夹"
             styles={{ 
               body: { 
-                background: '#1f1f1f',
+                background: 'var(--card-bg)',
                 overflow: 'auto',
                 height: '100%'
               } 
@@ -934,8 +935,8 @@ export function MainContent() {
                 size="small"
                 style={{ 
                   cursor: 'pointer',
-                  background: dragOverFolder === folder.key ? 'rgba(253, 122, 69, 0.15)' : '#141414',
-                  border: dragOverFolder === folder.key ? '2px dashed #fd7a45' : '1px solid #434343',
+                  background: dragOverFolder === folder.key ? 'rgba(253, 122, 69, 0.15)' : 'var(--card-bg)',
+                  border: dragOverFolder === folder.key ? '2px dashed #fd7a45' : '1px solid var(--border-color)',
                   transition: 'all 0.3s'
                 }}
                 styles={{ body: { padding: '16px' } }}
@@ -958,7 +959,7 @@ export function MainContent() {
                     </div>
                     <div style={{ 
                       fontSize: '12px', 
-                      color: '#8c8c8c',
+                      color: 'var(--text-secondary)',
                       marginTop: '4px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -990,7 +991,7 @@ export function MainContent() {
               height: previewType === 'image' ? '75vh' : 'auto',
               maxHeight: '80vh',
               overflow: 'hidden',
-              background: previewType === 'image' ? '#000' : '#1f1f1f',
+              background: previewType === 'image' ? 'var(--image-preview-bg)' : 'var(--card-bg)',
               position: 'relative',
               display: 'flex',
               alignItems: 'center',
@@ -1032,7 +1033,8 @@ export function MainContent() {
                 bottom: '16px',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                background: 'rgba(0, 0, 0, 0.7)',
+                background: 'rgba(0, 0, 0, 0.75)',
+                backdropFilter: 'blur(8px)',
                 padding: '8px 16px',
                 borderRadius: '24px',
                 display: 'flex',
@@ -1077,7 +1079,7 @@ export function MainContent() {
                 </Tooltip>
               </Space>
 
-              <div style={{ width: '1px', height: '20px', background: '#434343' }} />
+              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
 
               {/* 缩放按钮 */}
               <Space size="small">
@@ -1116,7 +1118,7 @@ export function MainContent() {
                 </Tooltip>
               </Space>
 
-              <div style={{ width: '1px', height: '20px', background: '#434343' }} />
+              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
 
               {/* 全屏按钮 */}
               <Tooltip title="全屏 (F)">
@@ -1131,14 +1133,15 @@ export function MainContent() {
           </div>
         ) : (
           <pre style={{
-            background: '#141414',
+            background: 'var(--bg-tertiary)',
             padding: '16px',
             borderRadius: '4px',
-            color: '#fff',
+            color: 'var(--text-primary)',
             fontSize: '13px',
             lineHeight: '1.6',
             maxHeight: '70vh',
-            overflow: 'auto'
+            overflow: 'auto',
+            border: '1px solid var(--border-color)'
           }}>
             {previewContent}
           </pre>
@@ -1155,7 +1158,7 @@ export function MainContent() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: '#000',
+            background: 'var(--image-preview-bg)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
@@ -1192,7 +1195,8 @@ export function MainContent() {
             bottom: '32px',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(0, 0, 0, 0.8)',
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(12px)',
             padding: '12px 20px',
             borderRadius: '32px',
             display: 'flex',
@@ -1239,7 +1243,7 @@ export function MainContent() {
               </Tooltip>
             </Space>
 
-            <div style={{ width: '1px', height: '24px', background: '#434343' }} />
+            <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
 
             {/* 缩放按钮 */}
             <Space size="small">
@@ -1281,7 +1285,7 @@ export function MainContent() {
               </Tooltip>
             </Space>
 
-            <div style={{ width: '1px', height: '24px', background: '#434343' }} />
+            <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
 
             {/* 退出全屏 */}
             <Tooltip title="退出全屏 (ESC)">

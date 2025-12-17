@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Layout, Button, message, Empty } from 'antd';
+import { useState, useEffect, useMemo } from 'react';
+import { Layout, Button, message, Empty, ConfigProvider, theme as antTheme } from 'antd';
+import zhCN from 'antd/es/locale/zh_CN';
 import {
   SettingOutlined,
   FolderOpenOutlined
@@ -26,7 +27,7 @@ type ViewMode = 'workspace' | 'import';
 
 function App() {
   const [appVersion, setAppVersion] = useState<string>('');
-  const { sidebarCollapsed, rootPath, setRootPath, setProducts } = useAppStore();
+  const { sidebarCollapsed, rootPath, setRootPath, setProducts, theme, setTheme } = useAppStore();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
   const [workspaceInitDialogOpen, setWorkspaceInitDialogOpen] = useState(false);
@@ -35,6 +36,48 @@ function App() {
 
   // 启用导航快捷键（Alt + ←/→ 和鼠标侧键）
   useNavigationShortcuts();
+
+  // 获取实际使用的主题
+  const actualTheme = useMemo(() => {
+    if (theme === 'system') {
+      // 检测系统主题
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return prefersDark ? 'dark' : 'light';
+    }
+    return theme;
+  }, [theme]);
+
+  // 监听系统主题变化
+  useEffect(() => {
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => {
+        // 强制重新渲染
+        setLoading(prev => prev);
+      };
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [theme]);
+
+  // 主题切换快捷键 Ctrl+Alt+G（深色 ⇄ 浅色）
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.altKey && e.key === 'g') {
+        e.preventDefault();
+        // 在深色和浅色之间切换
+        if (theme === 'dark') {
+          setTheme('light');
+        } else {
+          // 如果是浅色或跟随系统，都切换到深色
+          setTheme('dark');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [theme, setTheme]);
 
   useEffect(() => {
     const init = async () => {
@@ -188,9 +231,22 @@ function App() {
   };
 
   return (
-    <Layout style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* 自定义标题栏 */}
-      <TitleBar 
+    <ConfigProvider
+      locale={zhCN}
+      theme={{
+        algorithm: actualTheme === 'dark' ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: '#fd7a45',
+          borderRadius: 6,
+          colorInfo: '#fd7a45',
+          colorLink: '#fd7a45',
+        },
+      }}
+    >
+      <div data-theme={actualTheme}>
+      <Layout style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {/* 自定义标题栏 */}
+        <TitleBar 
         rootPath={rootPath}
         appVersion={appVersion}
         onOpenFolder={handleOpenFolder}
@@ -205,8 +261,7 @@ function App() {
             height: '100%',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            background: '#141414'
+            justifyContent: 'center'
           }}>
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -236,8 +291,7 @@ function App() {
             {/* 左侧分类侧边栏 */}
             <Sider
               width={sidebarCollapsed ? 64 : 200}
-              theme="dark"
-              style={{ background: '#141414' }}
+              theme={actualTheme === 'dark' ? 'dark' : 'light'}
               collapsible={false}
             >
               <Sidebar />
@@ -250,14 +304,14 @@ function App() {
                   {/* 工具栏 */}
                   <div style={{
                     padding: '12px',
-                    borderBottom: '1px solid #303030',
+                    borderBottom: '1px solid var(--border-color)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between'
                   }}>
                     <div style={{ 
                       fontSize: '12px', 
-                      color: '#8c8c8c',
+                      color: 'var(--text-secondary)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -282,7 +336,7 @@ function App() {
             )}
 
             {/* 主内容区 */}
-            <Layout style={{ background: '#141414', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <Layout style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {viewMode === 'workspace' ? (
                 <>
                   <Toolbar
@@ -290,7 +344,6 @@ function App() {
                     onImport={handleImport}
                   />
                   <Content style={{
-                    background: '#141414',
                     overflow: 'hidden',
                     flex: 1
                   }}>
@@ -299,7 +352,6 @@ function App() {
                 </>
               ) : (
                 <Content style={{
-                  background: '#141414',
                   overflow: 'auto'
                 }}>
                   <div style={{ padding: '16px' }}>
@@ -338,9 +390,10 @@ function App() {
         onCancel={() => setWorkspaceInitDialogOpen(false)}
         loading={initWorkspaceLoading}
       />
-    </Layout>
+      </Layout>
+      </div>
+    </ConfigProvider>
   );
 }
 
 export default App;
-

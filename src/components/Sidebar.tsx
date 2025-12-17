@@ -26,8 +26,11 @@ export function Sidebar() {
     setCurrentCategory, 
     products,
     sidebarCollapsed,
-    toggleSidebar
+    toggleSidebar,
+    theme
   } = useAppStore();
+
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   const getProductCount = (categoryKey: string) => {
     return products.filter(p => p.category === categoryKey).length;
@@ -52,7 +55,7 @@ export function Sidebar() {
           width: '100%'
         }}>
           <span style={{
-            color: isSelected ? '#fff' : 'rgba(255, 255, 255, 0.85)',
+            color: isSelected ? (isDark ? '#fff' : 'var(--primary-color)') : 'var(--text-primary)',
             fontWeight: isSelected ? 500 : 400
           }}>
             {cat.label}
@@ -60,8 +63,8 @@ export function Sidebar() {
           {!sidebarCollapsed && (
             <span style={{ 
               fontSize: '12px', 
-              color: isSelected ? cat.color : '#8c8c8c',
-              background: isSelected ? `${cat.color}20` : 'rgba(255, 255, 255, 0.06)',
+              color: isSelected ? cat.color : 'var(--text-secondary)',
+              background: isSelected ? `${cat.color}20` : 'var(--bg-hover)',
               padding: '2px 8px',
               borderRadius: '10px',
               minWidth: '24px',
@@ -82,13 +85,13 @@ export function Sidebar() {
       height: '100%', 
       display: 'flex', 
       flexDirection: 'column',
-      background: '#141414',
-      borderRight: '1px solid #303030'
+      borderRight: '1px solid var(--border-color)',
+      background: 'var(--bg-secondary)'
     }}>
       {/* 侧边栏头部 */}
       <div style={{ 
         padding: '16px',
-        borderBottom: '1px solid #303030',
+        borderBottom: '1px solid var(--border-color)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
@@ -97,7 +100,7 @@ export function Sidebar() {
           <span style={{ 
             fontSize: '14px', 
             fontWeight: 600,
-            color: '#fff'
+            color: 'var(--text-primary)'
           }}>
             分类目录
           </span>
@@ -106,18 +109,18 @@ export function Sidebar() {
           onClick={toggleSidebar}
           style={{ 
             cursor: 'pointer',
-            color: '#8c8c8c',
+            color: 'var(--text-secondary)',
             fontSize: '16px',
             padding: '4px',
             borderRadius: '4px',
             transition: 'all 0.3s'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#fff';
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+            e.currentTarget.style.background = 'var(--bg-hover)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#8c8c8c';
+            e.currentTarget.style.color = 'var(--text-secondary)';
             e.currentTarget.style.background = 'transparent';
           }}
         >
@@ -138,16 +141,17 @@ export function Sidebar() {
           flex: 1,
           paddingTop: '8px'
         }}
-        theme="dark"
+        theme={isDark ? "dark" : "light"}
+        className={!isDark ? 'ant-layout-sider-light' : ''}
       />
 
       {/* 侧边栏底部信息 */}
       {!sidebarCollapsed && (
         <div style={{
           padding: '16px',
-          borderTop: '1px solid #303030',
+          borderTop: '1px solid var(--border-color)',
           fontSize: '12px',
-          color: '#8c8c8c'
+          color: 'var(--text-secondary)'
         }}>
           <div>总产品数: {products.length}</div>
         </div>
