@@ -36,6 +36,8 @@ export interface FileInfo {
   createTime?: Date;
   /** 修改时间 */
   modifyTime?: Date;
+  /** 是否是目录 */
+  isDirectory?: boolean;
 }
 
 /**

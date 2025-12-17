@@ -36,12 +36,22 @@ interface FileItem {
   isDirectory?: boolean;
 }
 
+// 工作流分类（使用产品结构）
+const WORKFLOW_CATEGORIES = [
+  '01_In_Progress',
+  '02_Listing',
+  '03_Waiting',
+  '04_Active',
+  '05_Archive'
+];
+
 export function MainContent() {
   const { 
     selectedProduct, 
     selectedFolder,
     products,
-    viewMode
+    viewMode,
+    currentCategory
   } = useAppStore();
 
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -60,9 +70,17 @@ export function MainContent() {
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
 
+  // 判断是否是工作流分类
+  const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
+
   const selectedProductData = useMemo(() => {
-    return products.find(p => p.id === selectedProduct);
-  }, [products, selectedProduct]);
+    // 工作流分类：从 products 中查找
+    if (isWorkflowCategory) {
+      return products.find(p => p.id === selectedProduct);
+    }
+    // 普通文件夹：不需要产品数据
+    return null;
+  }, [products, selectedProduct, currentCategory, isWorkflowCategory]);
 
   // 加载 GoodsInfo.md
   useEffect(() => {
@@ -98,45 +116,70 @@ export function MainContent() {
   // 加载文件列表
   useEffect(() => {
     const loadFiles = async () => {
-      if (!selectedFolder || !selectedProductData) {
-        setFiles([]);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        // 获取选中文件夹的路径
-        const folderKeyMap: Record<string, keyof typeof selectedProductData.subFolders> = {
-          'ref_images': 'ref_images',
-          'ai_raw': 'ai_raw',
-          'ai_handle': 'ai_handle',
-          'final_goods': 'final_goods'
-        };
-
-        const folderKey = folderKeyMap[selectedFolder];
-        if (!folderKey) {
+      // 工作流模式：需要产品数据和子文件夹
+      if (isWorkflowCategory) {
+        if (!selectedFolder || !selectedProductData) {
           setFiles([]);
           return;
         }
 
-        const folderPath = selectedProductData.subFolders[folderKey];
-        
-        if (window.electronAPI?.listFiles) {
-          const fileList = await window.electronAPI.listFiles(folderPath);
-          // 只显示文件，不显示文件夹
-          const filesOnly = fileList.filter(f => !f.isDirectory);
-          setFiles(filesOnly);
+        setLoading(true);
+        try {
+          // 获取选中文件夹的路径
+          const folderKeyMap: Record<string, keyof typeof selectedProductData.subFolders> = {
+            'ref_images': 'ref_images',
+            'ai_raw': 'ai_raw',
+            'ai_handle': 'ai_handle',
+            'final_goods': 'final_goods'
+          };
+
+          const folderKey = folderKeyMap[selectedFolder];
+          if (!folderKey) {
+            setFiles([]);
+            return;
+          }
+
+          const folderPath = selectedProductData.subFolders[folderKey];
+          
+          if (window.electronAPI?.listFiles) {
+            const fileList = await window.electronAPI.listFiles(folderPath);
+            // 只显示文件，不显示文件夹
+            const filesOnly = fileList.filter(f => !f.isDirectory);
+            setFiles(filesOnly);
+          }
+        } catch (error) {
+          console.error('加载文件失败:', error);
+          message.error('加载文件失败');
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('加载文件失败:', error);
-        message.error('加载文件失败');
-      } finally {
-        setLoading(false);
+      }
+      // 普通文件夹模式：直接从路径加载
+      else {
+        if (!selectedProduct) {
+          setFiles([]);
+          return;
+        }
+
+        setLoading(true);
+        try {
+          if (window.electronAPI?.listFiles) {
+            const fileList = await window.electronAPI.listFiles(selectedProduct);
+            // 只显示文件，不显示文件夹
+            const filesOnly = fileList.filter(f => !f.isDirectory);
+            setFiles(filesOnly);
+          }
+        } catch (error) {
+          console.error('加载文件失败:', error);
+          message.error('加载文件失败');
+        } finally {
+          setLoading(false);
+        }
       }
     };
 
     loadFiles();
-  }, [selectedFolder, selectedProductData]);
+  }, [selectedFolder, selectedProductData, selectedProduct, isWorkflowCategory]);
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('zh-CN', {
@@ -549,7 +592,8 @@ export function MainContent() {
     );
   }
 
-  if (!selectedProductData) {
+  // 工作流模式下，如果产品数据不存在，显示错误
+  if (isWorkflowCategory && !selectedProductData) {
     return (
       <div style={{
         height: '100%',
@@ -581,7 +625,8 @@ export function MainContent() {
       padding: '24px',
       boxSizing: 'border-box'
     }}>
-      {/* 产品信息卡片 */}
+      {/* 产品信息卡片 - 只在工作流模式下显示 */}
+      {isWorkflowCategory && selectedProductData && (
       <Card
         style={{ 
           marginBottom: '16px', 
@@ -726,9 +771,10 @@ export function MainContent() {
           </div>
         </div>
       </Card>
+      )}
 
       {/* 文件列表/网格 */}
-      {selectedFolder ? (
+      {(isWorkflowCategory ? selectedFolder : selectedProduct) ? (
         <div 
           style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
           onDragEnter={(e) => handleDragEnter(e, selectedFolder)}
@@ -739,7 +785,12 @@ export function MainContent() {
           <Card
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>{folderNames[selectedFolder] || selectedFolder}</span>
+                <span>
+                  {isWorkflowCategory 
+                    ? (folderNames[selectedFolder] || selectedFolder)
+                    : (selectedProduct?.split('/').pop() || '文件列表')
+                  }
+                </span>
                 {dragOverFolder === selectedFolder && (
                   <Tag color="orange" style={{ margin: 0 }}>
                     拖放文件到这里

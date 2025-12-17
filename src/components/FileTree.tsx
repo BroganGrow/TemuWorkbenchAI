@@ -6,7 +6,8 @@ import {
   DeleteOutlined,
   EditOutlined,
   ScissorOutlined,
-  AimOutlined
+  AimOutlined,
+  FileOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -19,13 +20,29 @@ const SUB_FOLDERS = [
   { key: 'final_goods', label: '最终成品', fullLabel: '04_Final_Goods_Images', icon: '⭐' }
 ];
 
+// 工作流分类（使用产品结构）
+const WORKFLOW_CATEGORIES = [
+  '01_In_Progress',
+  '02_Listing',
+  '03_Waiting',
+  '04_Active',
+  '05_Archive'
+];
+
 interface FileTreeProps {
   onDrop?: (info: any) => void;
 }
 
+interface FileNode {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+}
+
 export function FileTree({ onDrop }: FileTreeProps) {
   const { 
-    currentCategory, 
+    currentCategory,
+    rootPath,
     products, 
     selectedProduct, 
     selectedFolder,
@@ -36,9 +53,42 @@ export function FileTree({ onDrop }: FileTreeProps) {
 
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [autoExpandEnabled, setAutoExpandEnabled] = useState(true);
+  const [normalFolders, setNormalFolders] = useState<FileNode[]>([]);
 
-  // 生成树形数据
-  const treeData = useMemo<DataNode[]>(() => {
+  // 判断是否是工作流分类
+  const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
+
+  // 加载普通文件夹（非工作流分类）
+  useEffect(() => {
+    const loadNormalFolders = async () => {
+      if (isWorkflowCategory || !rootPath) {
+        setNormalFolders([]);
+        return;
+      }
+
+      try {
+        const categoryPath = `${rootPath}/${currentCategory}`;
+        if (window.electronAPI?.listFiles) {
+          const files = await window.electronAPI.listFiles(categoryPath);
+          setNormalFolders(files.map(f => ({
+            name: f.name,
+            path: f.path,
+            isDirectory: f.isDirectory || false
+          })));
+        }
+      } catch (error) {
+        console.error('加载文件夹失败:', error);
+        setNormalFolders([]);
+      }
+    };
+
+    loadNormalFolders();
+  }, [currentCategory, rootPath, isWorkflowCategory]);
+
+  // 生成工作流产品树形数据
+  const workflowTreeData = useMemo<DataNode[]>(() => {
+    if (!isWorkflowCategory) return [];
+    
     const filteredProducts = products.filter(p => p.category === currentCategory);
     
     return filteredProducts.map(product => ({
@@ -52,7 +102,22 @@ export function FileTree({ onDrop }: FileTreeProps) {
         isLeaf: true
       }))
     }));
-  }, [products, currentCategory]);
+  }, [products, currentCategory, isWorkflowCategory]);
+
+  // 生成普通文件夹树形数据
+  const normalTreeData = useMemo<DataNode[]>(() => {
+    if (isWorkflowCategory) return [];
+    
+    return normalFolders.map(folder => ({
+      key: folder.path,
+      title: folder.name,
+      icon: folder.isDirectory ? <FolderOutlined /> : <FileOutlined />,
+      isLeaf: !folder.isDirectory
+    }));
+  }, [normalFolders, isWorkflowCategory]);
+
+  // 合并树形数据
+  const treeData = isWorkflowCategory ? workflowTreeData : normalTreeData;
 
   // 获取所有产品的key（用于展开/折叠全部）
   const allProductKeys = useMemo(() => {
@@ -121,13 +186,22 @@ export function FileTree({ onDrop }: FileTreeProps) {
       return;
     }
 
-    if (key.includes('-')) {
-      // 选中的是子文件夹
-      const [productId, folderKey] = key.split('-');
-      setSelectedProduct(productId);
-      setSelectedFolder(folderKey);
-    } else {
-      // 选中的是产品
+    // 工作流分类：处理产品和子文件夹
+    if (isWorkflowCategory) {
+      if (key.includes('-')) {
+        // 选中的是子文件夹
+        const [productId, folderKey] = key.split('-');
+        setSelectedProduct(productId);
+        setSelectedFolder(folderKey);
+      } else {
+        // 选中的是产品
+        setSelectedProduct(key);
+        setSelectedFolder(null);
+      }
+    } 
+    // 普通文件夹：直接选择文件夹/文件
+    else {
+      // 对于普通文件夹，key 就是完整路径
       setSelectedProduct(key);
       setSelectedFolder(null);
     }
