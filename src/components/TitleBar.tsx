@@ -7,22 +7,26 @@ import {
   FolderOpenOutlined,
   AppstoreOutlined,
   BgColorsOutlined,
-  CheckOutlined
+  CheckOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
+import { Button, Tooltip } from 'antd';
 
 interface TitleBarProps {
   rootPath: string;
   appVersion: string;
   onOpenFolder: () => void;
   onCloseFolder: () => void;
+  onRefresh: () => void;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({ 
   rootPath, 
   appVersion,
   onOpenFolder,
-  onCloseFolder 
+  onCloseFolder,
+  onRefresh
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const { theme, setTheme } = useAppStore();
@@ -187,6 +191,23 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           gap: '12px',
           marginRight: '12px'
         }}>
+          <Tooltip title="刷新工作区">
+            <Button
+              type="text"
+              size="small"
+              icon={<ReloadOutlined />}
+              onClick={onRefresh}
+              style={{ 
+                color: 'var(--text-secondary)',
+                fontSize: '14px',
+                width: '28px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            />
+          </Tooltip>
           <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>v{appVersion}</span>
         </div>
 

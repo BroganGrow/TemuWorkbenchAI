@@ -34,6 +34,7 @@ function App() {
   const [workspaceInitDialogOpen, setWorkspaceInitDialogOpen] = useState(false);
   const [initWorkspaceLoading, setInitWorkspaceLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // 用于强制刷新组件
 
   // 启用导航快捷键（Alt + ←/→ 和鼠标侧键）
   useNavigationShortcuts();
@@ -231,6 +232,22 @@ function App() {
     message.info('已关闭文件夹');
   };
 
+  const handleRefresh = async () => {
+    if (rootPath) {
+      message.loading({ content: '正在刷新...', key: 'refresh' });
+      try {
+        // 重新加载产品数据
+        await loadProducts(rootPath);
+        // 增加刷新计数器，强制重新挂载组件
+        setRefreshKey(prev => prev + 1);
+        message.success({ content: '刷新成功！', key: 'refresh', duration: 2 });
+      } catch (error) {
+        console.error('刷新失败:', error);
+        message.error({ content: '刷新失败', key: 'refresh', duration: 2 });
+      }
+    }
+  };
+
   return (
     <ConfigProvider
       locale={zhCN}
@@ -252,6 +269,7 @@ function App() {
         appVersion={appVersion}
         onOpenFolder={handleOpenFolder}
         onCloseFolder={handleCloseFolder}
+        onRefresh={handleRefresh}
       />
 
       <Layout style={{ flex: 1, overflow: 'hidden' }}>
@@ -300,7 +318,7 @@ function App() {
 
             {/* 中间文件树区域 - 可调整宽度 */}
             {viewMode === 'workspace' && currentCategory !== 'Dashboard' && (
-              <ResizableSider defaultWidth={280} minWidth={200} maxWidth={600}>
+              <ResizableSider defaultWidth={280} minWidth={200} maxWidth={600} key={`file-tree-${refreshKey}`}>
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   {/* 工具栏 */}
                   <div style={{
@@ -330,7 +348,7 @@ function App() {
                   
                   {/* 文件树 */}
                   <div style={{ flex: 1, overflow: 'auto' }}>
-                    <FileTree />
+                    <FileTree key={`tree-${refreshKey}`} />
                   </div>
                 </div>
               </ResizableSider>
@@ -344,7 +362,7 @@ function App() {
                     overflow: 'hidden',
                     flex: 1,
                     background: 'var(--bg-primary)'
-                  }}>
+                  }} key={`dashboard-${refreshKey}`}>
                     <Dashboard />
                   </Content>
                 ) : (
@@ -356,7 +374,7 @@ function App() {
                     <Content style={{
                       overflow: 'hidden',
                       flex: 1
-                    }}>
+                    }} key={`main-content-${refreshKey}`}>
                       <MainContent />
                     </Content>
                   </>
