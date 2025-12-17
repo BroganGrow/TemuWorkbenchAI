@@ -1,6 +1,8 @@
-import { Modal, Form, Input, Select, Radio, Space, message } from 'antd';
+import { Modal, Form, Input, Select, Radio, Space, message, Spin } from 'antd';
 import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '../store/appStore';
+import { LoadingOutlined } from '@ant-design/icons';
+import { chineseToPinyin } from '../utils/pinyinConverter';
 
 interface NewProductDialogProps {
   open: boolean;
@@ -12,8 +14,9 @@ interface ProductFormData {
   type: string;           // 产品类型缩写，如 CD、ST
   hasOrigin: 'HasOrigin' | 'NoOrigin';  // 是否有源文件
   spec: string;           // 规格，如 6pcs
-  titleEn: string;        // 英文标题
   titleCn: string;        // 中文标题
+  titleEn: string;        // 英文标题
+  translateMode: 'english' | 'pinyin';  // 翻译模式
 }
 
 // 预定义的产品类型
@@ -22,12 +25,137 @@ const PRESET_TYPES = [
   { value: 'ST', label: 'ST - 贴纸' },
 ];
 
+// 使用谷歌翻译接口翻译中文到英文
+async function translateToEnglish(text: string): Promise<string> {
+  try {
+    // 使用谷歌翻译的非官方API接口
+    // 这个接口是免费的，不需要API Key
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q=${encodeURIComponent(text)}`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error('谷歌翻译服务请求失败');
+    }
+    
+    const data = await response.json();
+    
+    // 谷歌翻译返回的格式: [[[翻译结果, 原文, null, null, 10]], null, "zh-CN"]
+    if (data && data[0] && data[0][0] && data[0][0][0]) {
+      let translated = data[0][0][0];
+      
+      // 如果有多个翻译片段，合并它们
+      if (data[0].length > 1) {
+        translated = data[0].map((item: any) => item[0]).join('');
+      }
+      
+      // 清理翻译结果：移除特殊字符，只保留字母、数字和空格
+      translated = translated.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+      
+      // 转换为驼峰命名（首字母大写，去除空格）
+      const words = translated.split(/\s+/);
+      translated = words
+        .map((word) => {
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
+        .join('');
+      
+      return translated || 'Title';
+    }
+    
+    // 如果没有翻译结果，抛出错误以触发降级
+    throw new Error('未找到翻译结果');
+  } catch (error) {
+    console.error('谷歌翻译失败:', error);
+    throw error;
+  }
+}
+
+// 备选方案1：使用 MyMemory Translation API
+async function translateToEnglishBackup(text: string): Promise<string> {
+  try {
+    const response = await fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=zh|en`
+    );
+    
+    if (!response.ok) {
+      throw new Error('MyMemory翻译服务请求失败');
+    }
+    
+    const data = await response.json();
+    
+    if (data.responseData && data.responseData.translatedText) {
+      let translated = data.responseData.translatedText;
+      translated = translated.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+      
+      const words = translated.split(/\s+/);
+      translated = words
+        .map((word) => {
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
+        .join('');
+      
+      return translated || 'Title';
+    }
+    
+    throw new Error('未找到翻译结果');
+  } catch (error) {
+    console.error('MyMemory翻译失败:', error);
+    throw error;
+  }
+}
+
+// 备选方案2：使用 LibreTranslate（如果前两个都失败）
+async function translateToEnglishBackup2(text: string): Promise<string> {
+  try {
+    const response = await fetch('https://libretranslate.de/translate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        q: text,
+        source: 'zh',
+        target: 'en',
+        format: 'text'
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('LibreTranslate服务请求失败');
+    }
+    
+    const data = await response.json();
+    
+    if (data.translatedText) {
+      let translated = data.translatedText;
+      translated = translated.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+      
+      const words = translated.split(/\s+/);
+      translated = words
+        .map((word) => {
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
+        .join('');
+      
+      return translated || 'Title';
+    }
+    
+    throw new Error('未找到翻译结果');
+  } catch (error) {
+    console.error('LibreTranslate翻译失败:', error);
+    throw error;
+  }
+}
+
 export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialogProps) {
   const [form] = Form.useForm<ProductFormData>();
   const [loading, setLoading] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [customType, setCustomType] = useState('');
   const [useCustomType, setUseCustomType] = useState(false);
   const [preview, setPreview] = useState('CD001_20251217_NoOrigin_6pcs_Candle_蜡烛贴纸');
+  const [lastChineseTitle, setLastChineseTitle] = useState(''); // 记录上次翻译的中文标题
   const { currentCategory, rootPath } = useAppStore();
 
   // 更新预览
@@ -49,9 +177,132 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
       form.resetFields();
       setUseCustomType(false);
       setCustomType('');
+      setLastChineseTitle('');
       updatePreview();
     }
   }, [open, form, updatePreview]);
+
+  // 执行翻译的核心函数
+  const performTranslation = async (chineseText: string, forceTranslate: boolean = false) => {
+    const translateMode = form.getFieldValue('translateMode') || 'english';
+    const currentEnglishTitle = form.getFieldValue('titleEn');
+
+    // 检查是否需要确认覆盖
+    if (!forceTranslate && currentEnglishTitle && currentEnglishTitle.trim() !== '' && lastChineseTitle !== chineseText) {
+      Modal.confirm({
+        title: '确认覆盖',
+        content: `英文标题已存在："${currentEnglishTitle}"，是否要根据新的中文标题重新生成？`,
+        okText: '重新生成',
+        cancelText: '保留原标题',
+        centered: true,
+        onOk: async () => {
+          await doTranslate(chineseText, translateMode);
+        },
+        onCancel: () => {
+          // 用户选择保留，更新中文标题记录
+          setLastChineseTitle(chineseText);
+        }
+      });
+      return;
+    }
+
+    await doTranslate(chineseText, translateMode);
+  };
+
+  // 实际执行翻译的函数
+  const doTranslate = async (chineseText: string, translateMode: 'english' | 'pinyin') => {
+    if (translateMode === 'pinyin') {
+      // 直接转换为拼音
+      const pinyin = chineseToPinyin(chineseText);
+      form.setFieldsValue({ titleEn: pinyin });
+      setLastChineseTitle(chineseText);
+      updatePreview();
+    } else {
+      // 尝试翻译成英文
+      setTranslating(true);
+      try {
+        let english = '';
+        let translationSuccess = false;
+        
+        // 1. 先尝试谷歌翻译
+        try {
+          console.log('尝试使用谷歌翻译...');
+          english = await translateToEnglish(chineseText);
+          translationSuccess = true;
+          console.log('谷歌翻译成功:', english);
+        } catch (error) {
+          console.log('谷歌翻译失败，尝试备用API 1');
+          
+          // 2. 如果谷歌翻译失败，尝试 MyMemory
+          try {
+            english = await translateToEnglishBackup(chineseText);
+            translationSuccess = true;
+            console.log('MyMemory翻译成功:', english);
+          } catch (error2) {
+            console.log('MyMemory翻译失败，尝试备用API 2');
+            
+            // 3. 如果 MyMemory 也失败，尝试 LibreTranslate
+            try {
+              english = await translateToEnglishBackup2(chineseText);
+              translationSuccess = true;
+              console.log('LibreTranslate翻译成功:', english);
+            } catch (error3) {
+              console.log('所有翻译API都失败');
+            }
+          }
+        }
+        
+        if (translationSuccess && english) {
+          form.setFieldsValue({ titleEn: english });
+        } else {
+          // 所有翻译API都失败，降级为拼音
+          const pinyin = chineseToPinyin(chineseText);
+          form.setFieldsValue({ titleEn: pinyin });
+          message.warning('翻译服务暂时无法使用，已自动转换为拼音');
+        }
+        setLastChineseTitle(chineseText);
+      } catch (error) {
+        // 异常处理，降级为拼音
+        const pinyin = chineseToPinyin(chineseText);
+        form.setFieldsValue({ titleEn: pinyin });
+        setLastChineseTitle(chineseText);
+        console.log('翻译异常，已转换为拼音');
+      } finally {
+        setTranslating(false);
+        updatePreview();
+      }
+    }
+  };
+
+  // 处理中文标题失去焦点，触发翻译
+  const handleChineseTitleBlur = async () => {
+    const chineseText = form.getFieldValue('titleCn')?.trim();
+    
+    if (!chineseText) {
+      form.setFieldsValue({ titleEn: '' });
+      updatePreview();
+      return;
+    }
+
+    // 如果中文标题没有变化，不需要翻译
+    if (chineseText === lastChineseTitle) {
+      return;
+    }
+
+    await performTranslation(chineseText);
+  };
+
+  // 处理翻译模式变化，重新生成英文标题
+  const handleTranslateModeChange = async (mode: 'english' | 'pinyin') => {
+    const chineseText = form.getFieldValue('titleCn')?.trim();
+    
+    if (!chineseText) {
+      return;
+    }
+
+    // 切换翻译模式时，强制重新翻译
+    await doTranslate(chineseText, mode);
+  };
 
   const handleSubmit = async () => {
     try {
@@ -101,6 +352,7 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
       width={600}
       okText="创建"
       cancelText="取消"
+      centered
     >
       <Form
         form={form}
@@ -108,6 +360,7 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
         initialValues={{
           type: 'CD',
           hasOrigin: 'NoOrigin',
+          translateMode: 'english',
         }}
         onValuesChange={updatePreview}
       >
@@ -178,35 +431,69 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
         </Form.Item>
 
         <Form.Item
+          label={
+            <Space>
+              <span>中文标题</span>
+              {translating && <Spin indicator={<LoadingOutlined style={{ fontSize: 14 }} spin />} />}
+            </Space>
+          }
+          name="titleCn"
+          rules={[
+            { required: true, message: '请输入中文标题' },
+            { max: 30, message: '中文标题不能超过30个字符' }
+          ]}
+          tooltip="输入完成后失去焦点（点击其他区域）将自动生成英文标题"
+        >
+          <Input 
+            placeholder="例如：蜡烛贴纸" 
+            maxLength={30}
+            onBlur={handleChineseTitleBlur}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="翻译模式"
+          name="translateMode"
+          tooltip="使用谷歌翻译将中文转换为英文，失败时自动尝试备用翻译服务，最终降级为拼音转换"
+        >
+          <Radio.Group onChange={(e) => handleTranslateModeChange(e.target.value)}>
+            <Radio value="english">翻译成英文 (谷歌翻译)</Radio>
+            <Radio value="pinyin">转换成拼音</Radio>
+          </Radio.Group>
+        </Form.Item>
+
+        <Form.Item
           label="英文标题"
           name="titleEn"
           rules={[
             { required: true, message: '请输入英文标题' },
             { pattern: /^[a-zA-Z0-9_\-\s]+$/, message: '只能包含字母、数字、空格、下划线和中划线' }
           ]}
+          tooltip="根据中文标题自动生成，也可手动修改。手动修改后，再次编辑中文标题时会提示是否覆盖"
         >
-          <Input placeholder="例如：Candle" maxLength={50} />
-        </Form.Item>
-
-        <Form.Item
-          label="中文标题"
-          name="titleCn"
-          rules={[
-            { required: true, message: '请输入中文标题' },
-            { max: 30, message: '中文标题不能超过30个字符' }
-          ]}
-        >
-          <Input placeholder="例如：蜡烛贴纸" maxLength={30} />
+          <Input 
+            placeholder="例如：Candle" 
+            maxLength={50}
+            onChange={(e) => {
+              // 用户手动修改英文标题时，记录当前的中文标题
+              // 这样可以避免后续相同中文标题触发翻译
+              const currentChineseTitle = form.getFieldValue('titleCn');
+              if (currentChineseTitle && e.target.value) {
+                setLastChineseTitle(currentChineseTitle);
+              }
+              updatePreview();
+            }}
+          />
         </Form.Item>
       </Form>
 
       <div style={{
         marginTop: '16px',
         padding: '12px',
-        background: '#f5f5f5',
+        background: 'var(--bg-tertiary)',
         borderRadius: '4px',
         fontSize: '12px',
-        color: '#666'
+        color: 'var(--text-secondary)'
       }}>
         <div><strong>预览示例：</strong></div>
         <div style={{ 
