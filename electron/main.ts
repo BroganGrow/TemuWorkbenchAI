@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
+import { registerIpcHandlers } from './ipc-handlers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +51,9 @@ function createWindow() {
 
 // 应用准备就绪
 app.whenReady().then(() => {
+  // 注册IPC处理器
+  registerIpcHandlers();
+  
   createWindow();
 
   app.on('activate', () => {

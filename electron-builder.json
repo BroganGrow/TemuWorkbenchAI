@@ -1,35 +1,78 @@
 {
-  "appId": "com.temu.material.manager",
-  "productName": "Temu素材管理",
+  "appId": "com.supertools.material.manager",
+  "productName": "SuperTools",
+  "copyright": "Copyright © 2024 SuperTools",
   "directories": {
-    "output": "release/${version}"
+    "output": "release/${version}",
+    "buildResources": "build"
   },
   "files": [
-    "dist",
-    "dist-electron"
+    "dist/**/*",
+    "dist-electron/**/*",
+    "package.json"
   ],
-  "mac": {
-    "target": ["dmg"],
-    "artifactName": "${productName}-${version}-${arch}.${ext}"
-  },
   "win": {
     "target": [
       {
         "target": "nsis",
         "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
       }
     ],
-    "artifactName": "${productName}-${version}-${arch}.${ext}"
-  },
-  "linux": {
-    "target": ["AppImage"],
-    "artifactName": "${productName}-${version}-${arch}.${ext}"
+    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "requestedExecutionLevel": "asInvoker",
+    "publisherName": "SuperTools",
+    "verifyUpdateCodeSignature": false
   },
   "nsis": {
     "oneClick": false,
+    "allowElevation": true,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
-    "createStartMenuShortcut": true
+    "createStartMenuShortcut": true,
+    "shortcutName": "SuperTools",
+    "deleteAppDataOnUninstall": false,
+    "perMachine": false,
+    "artifactName": "${productName}-Setup-${version}.${ext}"
+  },
+  "portable": {
+    "artifactName": "${productName}-Portable-${version}.${ext}"
+  },
+  "mac": {
+    "target": ["dmg", "zip"],
+    "artifactName": "${productName}-${version}-mac.${ext}",
+    "category": "public.app-category.productivity",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false
+  },
+  "dmg": {
+    "contents": [
+      {
+        "x": 130,
+        "y": 220
+      },
+      {
+        "x": 410,
+        "y": 220,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ],
+    "artifactName": "${productName}-${version}.${ext}"
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "artifactName": "${productName}-${version}.${ext}",
+    "category": "Utility"
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "your-username",
+    "repo": "super-tools",
+    "releaseType": "release"
   }
 }
 

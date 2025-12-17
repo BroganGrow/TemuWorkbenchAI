@@ -1,14 +1,30 @@
 {
-  "name": "temu-material-manager",
+  "name": "super-tools",
   "version": "1.0.0",
-  "description": "Temu素材管理桌面应用",
+  "description": "SuperTools - Temu素材管理桌面应用",
   "main": "dist-electron/main.js",
   "type": "module",
+  "author": {
+    "name": "SuperTools Team",
+    "email": "support@supertools.com"
+  },
+  "homepage": "https://github.com/your-username/super-tools",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/super-tools.git"
+  },
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "build:win": "npm run build -- --win",
+    "build:mac": "npm run build -- --mac",
+    "build:linux": "npm run build -- --linux",
+    "build:dir": "npm run build -- --dir",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "postinstall": "electron-builder install-app-deps",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "clean": "rimraf dist dist-electron release"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -29,8 +45,6 @@
     "vite": "^5.0.8",
     "vite-plugin-electron": "^0.28.1",
     "vite-plugin-electron-renderer": "^0.14.5"
-  },
-  "author": "",
-  "license": "MIT"
+  }
 }
 

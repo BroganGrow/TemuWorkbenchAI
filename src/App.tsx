@@ -1,224 +1,196 @@
 import { useState, useEffect } from 'react';
-import { Layout, Typography, Button, Card, Space, Tag, message } from 'antd';
+import { Layout, Menu, Button, message } from 'antd';
 import {
-  AppstoreOutlined,
-  CloudUploadOutlined,
   FolderOpenOutlined,
-  SettingOutlined,
-  CheckCircleOutlined
+  SettingOutlined
 } from '@ant-design/icons';
+import { Sidebar } from './components/Sidebar';
+import { FileTree } from './components/FileTree';
+import { Toolbar } from './components/Toolbar';
+import { MainContent } from './components/MainContent';
+import { NewProductDialog } from './components/NewProductDialog';
+import { DropZone } from './components/DropZone';
+import { ThemeToggle } from './components/ThemeToggle';
+import { useAppStore } from './store/appStore';
 
 const { Header, Sider, Content } = Layout;
-const { Title, Text, Paragraph } = Typography;
+
+type ViewMode = 'workspace' | 'import';
 
 function App() {
   const [appVersion, setAppVersion] = useState<string>('');
-  const [appPath, setAppPath] = useState<string>('');
+  const { sidebarCollapsed, rootPath, setRootPath } = useAppStore();
+  const [viewMode, setViewMode] = useState<ViewMode>('workspace');
+  const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
 
   useEffect(() => {
-    // 获取应用信息
     const getAppInfo = async () => {
       try {
         const version = await window.electronAPI.getAppVersion();
         const path = await window.electronAPI.getAppPath();
         setAppVersion(version);
-        setAppPath(path);
+        if (!rootPath) {
+          setRootPath(path);
+        }
       } catch (error) {
         console.error('获取应用信息失败:', error);
       }
     };
-
     getAppInfo();
-  }, []);
+  }, [rootPath, setRootPath]);
 
-  const handleTestAPI = async () => {
+  const handleSelectRootPath = async () => {
     try {
-      const result = await window.electronAPI.checkFileExists(appPath);
-      if (result.success) {
-        message.success(`路径检查成功: ${result.exists ? '存在' : '不存在'}`);
-      } else {
-        message.error(`路径检查失败: ${result.error}`);
+      const folder = await window.electronAPI?.selectFolder?.();
+      if (folder) {
+        setRootPath(folder);
+        message.success('工作目录已设置');
       }
     } catch (error) {
-      message.error('API调用失败');
+      message.error('选择目录失败');
     }
+  };
+
+  const handleImport = () => {
+    setViewMode('import');
   };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      {/* 侧边栏 */}
-      <Sider width={240} theme="dark" style={{ background: '#141414' }}>
-        <div style={{ 
-          padding: '20px', 
-          textAlign: 'center',
-          borderBottom: '1px solid #303030'
-        }}>
-          <Title level={4} style={{ color: '#fff', margin: 0 }}>
-            Temu素材管理
-          </Title>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            v{appVersion || '1.0.0'}
-          </Text>
-        </div>
-        
-        <div style={{ padding: '20px 0' }}>
-          <Button 
-            type="text" 
-            block 
-            icon={<AppstoreOutlined />}
-            style={{ 
-              height: '48px', 
-              textAlign: 'left',
-              paddingLeft: '24px',
-              color: '#fff',
-              background: '#1890ff'
-            }}
-          >
-            素材库
-          </Button>
-          <Button 
-            type="text" 
-            block 
-            icon={<CloudUploadOutlined />}
-            style={{ 
-              height: '48px', 
-              textAlign: 'left',
-              paddingLeft: '24px',
-              color: 'rgba(255, 255, 255, 0.65)',
-              marginTop: '8px'
-            }}
-          >
-            上传管理
-          </Button>
-          <Button 
-            type="text" 
-            block 
-            icon={<FolderOpenOutlined />}
-            style={{ 
-              height: '48px', 
-              textAlign: 'left',
-              paddingLeft: '24px',
-              color: 'rgba(255, 255, 255, 0.65)',
-              marginTop: '8px'
-            }}
-          >
-            文件管理
-          </Button>
-          <Button 
-            type="text" 
-            block 
-            icon={<SettingOutlined />}
-            style={{ 
-              height: '48px', 
-              textAlign: 'left',
-              paddingLeft: '24px',
-              color: 'rgba(255, 255, 255, 0.65)',
-              marginTop: '8px'
-            }}
-          >
-            设置
-          </Button>
-        </div>
-      </Sider>
-
-      {/* 主内容区 */}
-      <Layout>
-        <Header style={{ 
-          background: '#1f1f1f', 
-          padding: '0 24px',
-          borderBottom: '1px solid #303030',
-          display: 'flex',
-          alignItems: 'center'
-        }}>
-          <Title level={4} style={{ color: '#fff', margin: 0 }}>
-            欢迎使用 Temu 素材管理系统
-          </Title>
-        </Header>
-
-        <Content style={{ 
-          margin: '24px',
-          background: '#141414',
-          borderRadius: '8px',
-          padding: '24px'
-        }}>
-          {/* 欢迎卡片 */}
-          <Card 
-            style={{ marginBottom: '24px' }}
-            styles={{ body: { background: '#1f1f1f' } }}
-          >
-            <Space direction="vertical" size="large" style={{ width: '100%' }}>
-              <div>
-                <Title level={3} style={{ marginBottom: '8px' }}>
-                  🎉 应用已成功启动！
-                </Title>
-                <Paragraph type="secondary">
-                  这是一个基于 Electron + React + TypeScript 的现代化桌面应用框架
-                </Paragraph>
-              </div>
-
-              <div>
-                <Text strong>技术栈：</Text>
-                <div style={{ marginTop: '12px' }}>
-                  <Space wrap>
-                    <Tag color="blue">Electron 28+</Tag>
-                    <Tag color="cyan">React 18</Tag>
-                    <Tag color="geekblue">TypeScript 5</Tag>
-                    <Tag color="purple">Vite 5</Tag>
-                    <Tag color="magenta">Ant Design 5</Tag>
-                    <Tag color="orange">Zustand</Tag>
-                  </Space>
-                </div>
-              </div>
-
-              <div>
-                <Text strong>系统信息：</Text>
-                <div style={{ marginTop: '12px' }}>
-                  <Paragraph>
-                    <Text type="secondary">应用版本：</Text>
-                    <Text code>{appVersion || '加载中...'}</Text>
-                  </Paragraph>
-                  <Paragraph>
-                    <Text type="secondary">数据目录：</Text>
-                    <Text code style={{ fontSize: '12px' }}>{appPath || '加载中...'}</Text>
-                  </Paragraph>
-                </div>
-              </div>
-
-              <Space>
-                <Button type="primary" icon={<CheckCircleOutlined />} onClick={handleTestAPI}>
-                  测试 IPC 通信
-                </Button>
-                <Button>开始使用</Button>
-              </Space>
-            </Space>
-          </Card>
-
-          {/* 功能预览卡片 */}
+      {/* 顶部菜单栏 */}
+      <Header style={{
+        background: '#1f1f1f',
+        padding: '0 16px',
+        borderBottom: '1px solid #303030',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: '48px',
+        lineHeight: '48px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '16px'
+            fontSize: '16px', 
+            fontWeight: 600,
+            color: '#fff'
           }}>
-            <Card title="📁 素材管理" styles={{ body: { background: '#1f1f1f' } }}>
-              <Paragraph type="secondary">
-                支持图片、视频等多种素材类型的统一管理，快速检索和预览。
-              </Paragraph>
-            </Card>
-
-            <Card title="☁️ 云端同步" styles={{ body: { background: '#1f1f1f' } }}>
-              <Paragraph type="secondary">
-                自动同步到云端存储，多设备无缝协作，数据永不丢失。
-              </Paragraph>
-            </Card>
-
-            <Card title="🚀 批量操作" styles={{ body: { background: '#1f1f1f' } }}>
-              <Paragraph type="secondary">
-                支持批量上传、下载、重命名等操作，大幅提升工作效率。
-              </Paragraph>
-            </Card>
+            SuperTools
           </div>
-        </Content>
+          <Menu
+            mode="horizontal"
+            items={[
+              { key: 'file', label: '文件' },
+              { key: 'edit', label: '编辑' },
+              { key: 'view', label: '查看' },
+              { key: 'help', label: '帮助' }
+            ]}
+            style={{ 
+              background: 'transparent',
+              border: 'none',
+              lineHeight: '48px'
+            }}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <ThemeToggle />
+          <span style={{ fontSize: '12px', color: '#8c8c8c' }}>v{appVersion}</span>
+        </div>
+      </Header>
+
+      <Layout>
+        {/* 左侧分类侧边栏 */}
+        <Sider
+          width={sidebarCollapsed ? 64 : 200}
+          theme="dark"
+          style={{ background: '#141414' }}
+          collapsible={false}
+        >
+          <Sidebar />
+        </Sider>
+
+        {/* 中间文件树区域 */}
+        {viewMode === 'workspace' && (
+          <Sider
+            width={280}
+            theme="dark"
+            style={{ 
+              background: '#1f1f1f',
+              borderRight: '1px solid #303030'
+            }}
+            collapsible={false}
+          >
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* 工具栏 */}
+              <div style={{
+                padding: '12px',
+                borderBottom: '1px solid #303030',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <Button
+                  type="text"
+                  icon={<FolderOpenOutlined />}
+                  onClick={handleSelectRootPath}
+                  size="small"
+                >
+                  {rootPath ? '更改' : '选择目录'}
+                </Button>
+                <Button
+                  type="text"
+                  icon={<SettingOutlined />}
+                  size="small"
+                  onClick={() => setViewMode('import')}
+                />
+              </div>
+              
+              {/* 文件树 */}
+              <div style={{ flex: 1, overflow: 'auto' }}>
+                <FileTree />
+              </div>
+            </div>
+          </Sider>
+        )}
+
+        {/* 主内容区 */}
+        <Layout style={{ background: '#141414' }}>
+          {viewMode === 'workspace' ? (
+            <>
+              <Toolbar
+                onNewProduct={() => setNewProductDialogOpen(true)}
+                onImport={handleImport}
+              />
+              <Content style={{
+                background: '#141414',
+                overflow: 'auto'
+              }}>
+                <MainContent />
+              </Content>
+            </>
+          ) : (
+            <Content style={{
+              background: '#141414',
+              overflow: 'auto'
+            }}>
+              <div style={{ padding: '16px' }}>
+                <Button
+                  onClick={() => setViewMode('workspace')}
+                  style={{ marginBottom: '16px' }}
+                >
+                  ← 返回工作区
+                </Button>
+                <DropZone />
+              </div>
+            </Content>
+          )}
+        </Layout>
       </Layout>
+
+      {/* 新建产品对话框 */}
+      <NewProductDialog
+        open={newProductDialogOpen}
+        onClose={() => setNewProductDialogOpen(false)}
+      />
     </Layout>
   );
 }

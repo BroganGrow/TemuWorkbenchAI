@@ -44,6 +44,12 @@ release
 # Build
 *.local
 out
+release
+
+# Icon files (need to be created by user)
+build/icon.ico
+build/icon.icns
+build/icon.png
 
 # OS
 Thumbs.db

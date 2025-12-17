@@ -46,10 +46,22 @@ npm run dev
 ### 构建生产版本
 
 ```bash
+# 打包所有平台
 npm run build
+
+# 仅打包 Windows
+npm run build:win
+
+# 仅打包 macOS
+npm run build:mac
+
+# 仅打包 Linux
+npm run build:linux
 ```
 
-构建产物将输出到 `release` 目录。
+构建产物将输出到 `release/版本号/` 目录。
+
+**注意**: 首次打包前需要准备图标文件，详见 [打包发布指南.md](./打包发布指南.md)
 
 ## 项目结构
 
