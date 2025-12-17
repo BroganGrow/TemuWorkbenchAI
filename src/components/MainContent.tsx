@@ -872,13 +872,6 @@ export function MainContent() {
                   <List.Item
                     key={file.path}
                     actions={[
-                      <Tooltip title="预览" key="preview">
-                        <Button 
-                          type="text" 
-                          icon={<EyeOutlined />}
-                          onClick={() => handlePreview(file, index)}
-                        />
-                      </Tooltip>,
                       <Tooltip title="复制" key="copy">
                         <Button 
                           type="text" 
@@ -896,8 +889,10 @@ export function MainContent() {
                     ]}
                     style={{
                       padding: '12px 0',
-                      borderBottom: '1px solid var(--border-color)'
+                      borderBottom: '1px solid var(--border-color)',
+                      cursor: 'pointer'
                     }}
+                    onDoubleClick={() => handlePreview(file, index)}
                   >
                     <List.Item.Meta
                       avatar={getFileIcon(file.name)}
@@ -971,9 +966,6 @@ export function MainContent() {
                       )
                     }
                     actions={[
-                      <Tooltip title="预览" key="preview">
-                        <EyeOutlined onClick={() => handlePreview(file, index)} />
-                      </Tooltip>,
                       <Tooltip title="复制" key="copy">
                         <CopyOutlined onClick={() => handleCopyFile(file.path)} />
                       </Tooltip>,
@@ -983,8 +975,10 @@ export function MainContent() {
                     ]}
                     style={{
                       background: 'var(--card-bg)',
-                      borderColor: 'var(--border-color)'
+                      borderColor: 'var(--border-color)',
+                      cursor: 'pointer'
                     }}
+                    onDoubleClick={() => handlePreview(file, index)}
                   >
                     <Card.Meta
                       title={
