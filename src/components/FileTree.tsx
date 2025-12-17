@@ -1,14 +1,16 @@
-import { Tree, Dropdown, Modal, message } from 'antd';
+import { Tree, Dropdown, Modal, Button, Tooltip, message } from 'antd';
 import type { DataNode, TreeProps } from 'antd/es/tree';
 import {
   FolderOutlined,
   FolderOpenOutlined,
   DeleteOutlined,
   EditOutlined,
-  ScissorOutlined
+  ScissorOutlined,
+  AimOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useTreeShortcuts } from '../hooks/useTreeShortcuts';
 
 const SUB_FOLDERS = [
   { key: 'ref_images', label: '参考图', fullLabel: '01_Ref_Images', icon: '📸' },
@@ -33,6 +35,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
   } = useAppStore();
 
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const [autoExpandEnabled, setAutoExpandEnabled] = useState(true);
 
   // 生成树形数据
   const treeData = useMemo<DataNode[]>(() => {
@@ -50,6 +53,64 @@ export function FileTree({ onDrop }: FileTreeProps) {
       }))
     }));
   }, [products, currentCategory]);
+
+  // 获取所有产品的key（用于展开/折叠全部）
+  const allProductKeys = useMemo(() => {
+    return treeData.map(node => node.key as string);
+  }, [treeData]);
+
+  // 自动展开选中的产品（当选择产品或文件夹时）
+  useEffect(() => {
+    if (selectedProduct && autoExpandEnabled) {
+      if (!expandedKeys.includes(selectedProduct)) {
+        setExpandedKeys(prev => [...prev, selectedProduct]);
+      }
+    }
+  }, [selectedProduct, autoExpandEnabled]);
+
+  // 展开全部
+  const handleExpandAll = () => {
+    setExpandedKeys(allProductKeys);
+    setAutoExpandEnabled(false); // 手动操作后禁用自动展开
+  };
+
+  // 折叠全部
+  const handleCollapseAll = () => {
+    setExpandedKeys([]);
+    setAutoExpandEnabled(false); // 手动操作后禁用自动展开
+  };
+
+  // 定位到当前选中的产品
+  const handleLocateCurrent = useCallback(() => {
+    if (!selectedProduct) {
+      return;
+    }
+
+    // 展开并滚动到选中的产品
+    if (!expandedKeys.includes(selectedProduct)) {
+      setExpandedKeys(prev => [...prev, selectedProduct]);
+    }
+
+    // 使用 setTimeout 确保 DOM 更新后再滚动
+    setTimeout(() => {
+      const selectedNode = document.querySelector('.ant-tree-treenode-selected');
+      if (selectedNode) {
+        selectedNode.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }
+    }, 100);
+
+    setAutoExpandEnabled(true); // 重新启用自动展开
+  }, [selectedProduct, expandedKeys]);
+
+  // 注册快捷键
+  useTreeShortcuts({
+    onExpandAll: handleExpandAll,
+    onCollapseAll: handleCollapseAll,
+    onLocateCurrent: handleLocateCurrent
+  });
 
   const handleSelect: TreeProps['onSelect'] = (selectedKeys) => {
     const key = selectedKeys[0] as string;
@@ -126,13 +187,110 @@ export function FileTree({ onDrop }: FileTreeProps) {
 
   return (
     <div style={{ 
-      padding: '16px',
       height: '100%',
-      overflowY: 'auto',
-      overflowX: 'hidden'
-    }}
-      className="file-tree-container"
-    >
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
+      {/* 工具栏 - Android Studio 风格 */}
+      <div style={{
+        padding: '4px 8px',
+        borderBottom: '1px solid #303030',
+        background: '#1f1f1f',
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px'
+      }}>
+        {/* 定位当前文件 */}
+        <Tooltip title="定位当前文件 (Alt+F1)" placement="bottom">
+          <Button
+            type="text"
+            size="small"
+            icon={<AimOutlined style={{ fontSize: '16px' }} />}
+            onClick={handleLocateCurrent}
+            disabled={!selectedProduct}
+            style={{ 
+              width: '28px',
+              height: '28px',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: selectedProduct ? '#8c8c8c' : '#434343',
+              background: 'transparent'
+            }}
+          />
+        </Tooltip>
+
+        {/* 分隔线 */}
+        <div style={{ 
+          width: '1px', 
+          height: '20px', 
+          background: '#434343',
+          margin: '0 2px'
+        }} />
+
+        {/* 展开全部 */}
+        <Tooltip title="展开全部 (Ctrl+Shift+E)" placement="bottom">
+          <Button
+            type="text"
+            size="small"
+            icon={
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 5.5L8 1.5L12 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M4 10.5L8 14.5L12 10.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            }
+            onClick={handleExpandAll}
+            style={{ 
+              width: '28px',
+              height: '28px',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#8c8c8c',
+              background: 'transparent'
+            }}
+          />
+        </Tooltip>
+
+        {/* 折叠全部 */}
+        <Tooltip title="折叠全部 (Ctrl+Shift+C)" placement="bottom">
+          <Button
+            type="text"
+            size="small"
+            icon={
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 2L8 6L12 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M4 14L8 10L12 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            }
+            onClick={handleCollapseAll}
+            style={{ 
+              width: '28px',
+              height: '28px',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#8c8c8c',
+              background: 'transparent'
+            }}
+          />
+        </Tooltip>
+      </div>
+
+      {/* 文件树 */}
+      <div style={{ 
+        padding: '16px',
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden'
+      }}
+        className="file-tree-container"
+      >
       <style>{`
         /* 隐藏横向滚动条，文字超出用省略号 */
         .file-tree-container {
@@ -210,6 +368,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
           )}
         />
       )}
+      </div>
     </div>
   );
 }
