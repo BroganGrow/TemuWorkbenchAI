@@ -71,7 +71,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       // 初始状态
-      currentCategory: '01_In_Progress',
+      currentCategory: 'Dashboard',
       selectedProduct: null,
       selectedFolder: null,
       theme: 'dark',

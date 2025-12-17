@@ -9,6 +9,7 @@ import { Sidebar } from './components/Sidebar';
 import { FileTree } from './components/FileTree';
 import { Toolbar } from './components/Toolbar';
 import { MainContent } from './components/MainContent';
+import { Dashboard } from './components/Dashboard';
 import { NewProductDialog } from './components/NewProductDialog';
 import { WorkspaceInitDialog } from './components/WorkspaceInitDialog';
 import { DropZone } from './components/DropZone';
@@ -27,7 +28,7 @@ type ViewMode = 'workspace' | 'import';
 
 function App() {
   const [appVersion, setAppVersion] = useState<string>('');
-  const { sidebarCollapsed, rootPath, setRootPath, setProducts, theme, setTheme } = useAppStore();
+  const { sidebarCollapsed, rootPath, setRootPath, setProducts, theme, setTheme, currentCategory } = useAppStore();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
   const [workspaceInitDialogOpen, setWorkspaceInitDialogOpen] = useState(false);
@@ -298,7 +299,7 @@ function App() {
             </Sider>
 
             {/* 中间文件树区域 - 可调整宽度 */}
-            {viewMode === 'workspace' && (
+            {viewMode === 'workspace' && currentCategory !== 'Dashboard' && (
               <ResizableSider defaultWidth={280} minWidth={200} maxWidth={600}>
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   {/* 工具栏 */}
@@ -338,18 +339,28 @@ function App() {
             {/* 主内容区 */}
             <Layout style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {viewMode === 'workspace' ? (
-                <>
-                  <Toolbar
-                    onNewProduct={() => setNewProductDialogOpen(true)}
-                    onImport={handleImport}
-                  />
+                currentCategory === 'Dashboard' ? (
                   <Content style={{
                     overflow: 'hidden',
-                    flex: 1
+                    flex: 1,
+                    background: 'var(--bg-primary)'
                   }}>
-                    <MainContent />
+                    <Dashboard />
                   </Content>
-                </>
+                ) : (
+                  <>
+                    <Toolbar
+                      onNewProduct={() => setNewProductDialogOpen(true)}
+                      onImport={handleImport}
+                    />
+                    <Content style={{
+                      overflow: 'hidden',
+                      flex: 1
+                    }}>
+                      <MainContent />
+                    </Content>
+                  </>
+                )
               ) : (
                 <Content style={{
                   overflow: 'auto'

@@ -7,11 +7,13 @@ import {
   CheckCircleOutlined,
   FolderOutlined,
   MenuFoldOutlined,
-  MenuUnfoldOutlined
+  MenuUnfoldOutlined,
+  DashboardOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 
 export const CATEGORIES = [
+  { key: 'Dashboard', label: '控制台', icon: DashboardOutlined, color: '#1890ff' },
   { key: '00_Assets', label: '公共素材库', icon: InboxOutlined, color: '#8c8c8c' },
   { key: '01_In_Progress', label: '选品中', icon: ThunderboltOutlined, color: '#ff9c5a' },
   { key: '02_Listing', label: '制作中', icon: EditOutlined, color: '#fd7a45' },
@@ -36,11 +38,33 @@ export function Sidebar() {
     return products.filter(p => p.category === categoryKey).length;
   };
 
-  // 分离公共素材库和其他分类
-  const assetsCategory = CATEGORIES[0]; // 公共素材库
-  const workflowCategories = CATEGORIES.slice(1); // 其他工作流分类
+  // 分离控制台、公共素材库和其他分类
+  const dashboardCategory = CATEGORIES[0]; // 控制台
+  const assetsCategory = CATEGORIES[1]; // 公共素材库
+  const workflowCategories = CATEGORIES.slice(2); // 其他工作流分类
 
   const createMenuItem = (cat: typeof CATEGORIES[0]) => {
+    // 控制台不需要显示数量
+    if (cat.key === 'Dashboard') {
+      const isSelected = currentCategory === cat.key;
+      return {
+        key: cat.key,
+        icon: <cat.icon style={{ 
+          fontSize: '16px', 
+          color: isSelected ? cat.color : '#8c8c8c',
+          transition: 'color 0.3s'
+        }} />,
+        label: (
+          <span style={{
+            color: isSelected ? (isDark ? '#fff' : 'var(--primary-color)') : 'var(--text-primary)',
+            fontWeight: isSelected ? 500 : 400
+          }}>
+            {cat.label}
+          </span>
+        )
+      };
+    }
+
     const count = getProductCount(cat.key);
     const isSelected = currentCategory === cat.key;
     
@@ -84,6 +108,7 @@ export function Sidebar() {
     };
   };
 
+  const dashboardMenuItem = [createMenuItem(dashboardCategory)];
   const assetsMenuItem = [createMenuItem(assetsCategory)];
   const workflowMenuItems = workflowCategories.map(createMenuItem);
 
@@ -137,6 +162,31 @@ export function Sidebar() {
 
       {/* 菜单容器 */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+        {/* 控制台 */}
+        <Menu
+          mode="inline"
+          selectedKeys={[currentCategory]}
+          items={dashboardMenuItem}
+          onClick={({ key }) => setCurrentCategory(key)}
+          inlineCollapsed={sidebarCollapsed}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            paddingTop: '8px',
+            paddingBottom: '8px'
+          }}
+          theme={isDark ? "dark" : "light"}
+          className={!isDark ? 'ant-layout-sider-light' : ''}
+        />
+
+        {/* 分隔线 */}
+        <div style={{
+          height: '1px',
+          margin: sidebarCollapsed ? '0 12px 8px' : '0 16px 8px',
+          background: 'var(--border-color)',
+          flexShrink: 0
+        }} />
+
         {/* 公共素材库 */}
         <Menu
           mode="inline"
@@ -147,7 +197,6 @@ export function Sidebar() {
           style={{
             background: 'transparent',
             border: 'none',
-            paddingTop: '8px',
             paddingBottom: '8px'
           }}
           theme={isDark ? "dark" : "light"}
