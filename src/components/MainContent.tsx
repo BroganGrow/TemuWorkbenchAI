@@ -230,6 +230,16 @@ export function MainContent() {
     // 获取拖放的文件
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length === 0) {
+      return; // 用户取消或没有拖放文件，静默返回
+    }
+
+    // 获取文件路径并过滤有效文件
+    const filePaths = droppedFiles
+      .map(file => (file as any).path)
+      .filter(path => path && typeof path === 'string');
+    
+    // 如果没有有效的文件路径，静默返回（可能是拖放了非文件项）
+    if (filePaths.length === 0) {
       return;
     }
 
@@ -255,9 +265,6 @@ export function MainContent() {
 
     setImporting(true);
     try {
-      // 获取文件路径
-      const filePaths = droppedFiles.map(file => (file as any).path);
-      
       // 调用导入API
       if (window.electronAPI?.importFiles) {
         const result = await window.electronAPI.importFiles(filePaths, targetFolder);
