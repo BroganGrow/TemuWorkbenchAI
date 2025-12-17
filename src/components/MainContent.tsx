@@ -23,9 +23,12 @@ import {
   FullscreenOutlined,
   FullscreenExitOutlined,
   FileMarkdownOutlined,
-  CopyOutlined
+  CopyOutlined,
+  RobotOutlined,
+  LoadingOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
+import { generateCompletion } from '../utils/aiService';
 
 interface FileItem {
   name: string;
@@ -54,6 +57,7 @@ export function MainContent() {
     currentCategory
   } = useAppStore();
 
+  const { aiModels } = useAppStore();
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -69,6 +73,7 @@ export function MainContent() {
   const [saveTimer, setSaveTimer] = useState<NodeJS.Timeout | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [optimizingTitle, setOptimizingTitle] = useState(false);
 
   // 判断是否是工作流分类
   const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
@@ -573,14 +578,50 @@ export function MainContent() {
     setSaveTimer(timer);
   };
 
-  // 清理定时器
-  useEffect(() => {
-    return () => {
-      if (saveTimer) {
-        clearTimeout(saveTimer);
+  // AI 优化标题
+  const handleOptimizeTitle = async () => {
+    if (!goodsInfo) return;
+
+    // 提取当前标题 (第一行，移除 # 和空格)
+    const lines = goodsInfo.split('\n');
+    const titleLineIndex = lines.findIndex(line => line.trim().startsWith('# '));
+    if (titleLineIndex === -1) {
+      message.warning('未找到产品标题，请确保第一行为 "# 标题" 格式');
+      return;
+    }
+
+    const currentTitle = lines[titleLineIndex].replace(/^#\s*/, '').trim();
+    if (!currentTitle) {
+      message.warning('标题内容为空');
+      return;
+    }
+
+    setOptimizingTitle(true);
+    try {
+      const prompt = `请优化以下 Temu 产品标题，使其更具吸引力，包含高搜索量的关键词，符合 SEO 标准，且通顺自然。
+请直接返回优化后的标题（包含中文和英文，用括号隔开，格式如：中文标题 (English Title)），不要包含其他解释或引导语。
+
+原标题：${currentTitle}`;
+
+      const optimizedTitle = await generateCompletion(aiModels, [
+        { role: 'user', content: prompt }
+      ]);
+
+      if (optimizedTitle) {
+        // 更新标题
+        const newLines = [...lines];
+        newLines[titleLineIndex] = `# ${optimizedTitle.trim()}`;
+        const newContent = newLines.join('\n');
+        
+        handleGoodsInfoChange(newContent);
+        message.success('标题优化成功');
       }
-    };
-  }, [saveTimer]);
+    } catch (error) {
+      message.error(`优化失败: ${(error as Error).message}`);
+    } finally {
+      setOptimizingTitle(false);
+    }
+  };
 
   if (!selectedProduct) {
     return (
@@ -712,6 +753,19 @@ export function MainContent() {
                 )}
               </div>
               <Space size="small">
+                <Tooltip title="AI 优化标题">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={optimizingTitle ? <LoadingOutlined /> : <RobotOutlined />}
+                    onClick={handleOptimizeTitle}
+                    disabled={!goodsInfo || goodsInfoLoading || optimizingTitle}
+                    style={{ color: optimizingTitle ? '#1890ff' : 'var(--text-secondary)' }}
+                  >
+                    AI 优化
+                  </Button>
+                </Tooltip>
+                <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 4px' }} />
                 <Tooltip title="查看完整内容">
                   <Button
                     type="text"

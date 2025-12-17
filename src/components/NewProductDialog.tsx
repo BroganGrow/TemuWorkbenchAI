@@ -1,4 +1,4 @@
-import { Modal, Form, Input, Select, Radio, Space, message, Spin } from 'antd';
+import { Modal, Form, Input, Select, Radio, Space, message, Spin, Switch } from 'antd';
 import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '../store/appStore';
 import { LoadingOutlined } from '@ant-design/icons';
@@ -156,6 +156,7 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
   const [useCustomType, setUseCustomType] = useState(false);
   const [preview, setPreview] = useState('CD001_20251217_NoOrigin_6pcs_Candle_蜡烛贴纸');
   const [lastChineseTitle, setLastChineseTitle] = useState(''); // 记录上次翻译的中文标题
+  const [autoFollow, setAutoFollow] = useState(true); // 是否自动跟随中文标题变化
   const { currentCategory, rootPath } = useAppStore();
 
   // 更新预览
@@ -178,6 +179,7 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
       setUseCustomType(false);
       setCustomType('');
       setLastChineseTitle('');
+      setAutoFollow(true); // 重置为默认开启自动跟随
       updatePreview();
     }
   }, [open, form, updatePreview]);
@@ -187,7 +189,13 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
     const translateMode = form.getFieldValue('translateMode') || 'english';
     const currentEnglishTitle = form.getFieldValue('titleEn');
 
-    // 检查是否需要确认覆盖
+    // 如果开启了自动跟随，直接翻译，不需要确认
+    if (autoFollow) {
+      await doTranslate(chineseText, translateMode);
+      return;
+    }
+
+    // 如果关闭了自动跟随，检查是否需要确认覆盖
     if (!forceTranslate && currentEnglishTitle && currentEnglishTitle.trim() !== '' && lastChineseTitle !== chineseText) {
       Modal.confirm({
         title: '确认覆盖',
@@ -442,7 +450,11 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
             { required: true, message: '请输入中文标题' },
             { max: 30, message: '中文标题不能超过30个字符' }
           ]}
-          tooltip="输入完成后失去焦点（点击其他区域）将自动生成英文标题"
+          tooltip={
+            autoFollow
+              ? "输入完成后失去焦点（点击其他区域）将自动更新英文标题"
+              : "输入完成后失去焦点时，如英文标题已存在会提示是否覆盖"
+          }
         >
           <Input 
             placeholder="例如：蜡烛贴纸" 
@@ -463,13 +475,28 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
         </Form.Item>
 
         <Form.Item
-          label="英文标题"
+          label={
+            <Space>
+              <span>英文标题</span>
+              <Switch 
+                checked={autoFollow} 
+                onChange={setAutoFollow}
+                size="small"
+                checkedChildren="跟随"
+                unCheckedChildren="手动"
+              />
+            </Space>
+          }
           name="titleEn"
           rules={[
             { required: true, message: '请输入英文标题' },
             { pattern: /^[a-zA-Z0-9_\-\s]+$/, message: '只能包含字母、数字、空格、下划线和中划线' }
           ]}
-          tooltip="根据中文标题自动生成，也可手动修改。手动修改后，再次编辑中文标题时会提示是否覆盖"
+          tooltip={
+            autoFollow 
+              ? "自动跟随模式：修改中文标题后会自动更新英文标题，不管英文标题里面有没有内容，也不会弹窗提示" 
+              : "手动模式：默认也是会自动生成英文标题的，但是再次修改中文标题时会提示是否覆盖英文标题"
+          }
         >
           <Input 
             placeholder="例如：Candle" 

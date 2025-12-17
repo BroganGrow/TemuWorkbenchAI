@@ -1,6 +1,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export interface AIProvider {
+  id: string;
+  name: string;
+  apiKey: string;
+  selected: boolean;
+}
+
+export interface AIModel {
+  id: string;
+  name: string;
+  providers: AIProvider[];
+  enabled: boolean;
+}
+
 export interface ProductNode {
   id: string;
   name: string;
@@ -50,6 +64,9 @@ export interface AppState {
   // 刷新计数器（用于触发强制重新加载）
   refreshKey: number;
   
+  // AI 模型配置
+  aiModels: AIModel[];
+
   // Actions
   setCurrentCategory: (category: string) => void;
   setSelectedProduct: (product: string | null, recordHistory?: boolean) => void;
@@ -64,6 +81,11 @@ export interface AppState {
   setViewMode: (mode: 'list' | 'grid') => void;
   setSearchKeyword: (keyword: string) => void;
   triggerRefresh: () => void;
+  // AI 模型 Actions
+  setAIModels: (models: AIModel[]) => void;
+  updateAIModel: (modelId: string, updates: Partial<AIModel>) => void;
+  updateAIProvider: (modelId: string, providerId: string, updates: Partial<AIProvider>) => void;
+
   // 历史导航
   goBack: () => void;
   goForward: () => void;
@@ -87,11 +109,70 @@ export const useAppStore = create<AppState>()(
       history: [],
       historyIndex: -1,
       refreshKey: 0,
+      
+      // 默认 AI 模型配置
+      aiModels: [
+        {
+          id: 'deepseek',
+          name: 'Deepseek',
+          enabled: true,
+          providers: [
+            { id: 'official', name: '官方', apiKey: '', selected: true },
+            { id: 'siliconflow', name: '硅基流动', apiKey: '', selected: false }
+          ]
+        },
+        {
+          id: 'openai',
+          name: 'OpenAI',
+          enabled: true,
+          providers: [
+            { id: 'official', name: '官方', apiKey: '', selected: true }
+          ]
+        },
+        {
+          id: 'claude',
+          name: 'Claude',
+          enabled: true,
+          providers: [
+            { id: 'official', name: '官方', apiKey: '', selected: true }
+          ]
+        }
+      ],
 
       // Actions
       setCurrentCategory: (category) => set({ currentCategory: category, selectedProduct: null }),
       
       triggerRefresh: () => set((state) => ({ refreshKey: state.refreshKey + 1 })),
+
+      setAIModels: (models) => set({ aiModels: models }),
+
+      updateAIModel: (modelId, updates) => set((state) => ({
+        aiModels: state.aiModels.map(model => 
+          model.id === modelId ? { ...model, ...updates } : model
+        )
+      })),
+
+      updateAIProvider: (modelId, providerId, updates) => set((state) => ({
+        aiModels: state.aiModels.map(model => {
+          if (model.id === modelId) {
+            return {
+              ...model,
+              providers: model.providers.map(provider => {
+                if (provider.id === providerId) {
+                  return { ...provider, ...updates };
+                }
+                // 如果是选中操作，取消其他 provider 的选中状态（如果是单选逻辑）
+                // 假设同个模型下只能选中一个 provider
+                if (updates.selected && provider.id !== providerId) {
+                  return { ...provider, selected: false };
+                }
+                return provider;
+              })
+            };
+          }
+          return model;
+        })
+      })),
 
       setSelectedProduct: (product, recordHistory = true) => set((state) => {
         const newState: any = { 
@@ -218,7 +299,8 @@ export const useAppStore = create<AppState>()(
         theme: state.theme,
         rootPath: state.rootPath,
         sidebarCollapsed: state.sidebarCollapsed,
-        viewMode: state.viewMode
+        viewMode: state.viewMode,
+        aiModels: state.aiModels
       })
     }
   )

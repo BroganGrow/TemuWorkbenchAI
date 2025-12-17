@@ -19,6 +19,7 @@ interface TitleBarProps {
   onOpenFolder: () => void;
   onCloseFolder: () => void;
   onRefresh: () => void;
+  onOpenAIConfig: () => void;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({ 
@@ -26,7 +27,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   appVersion,
   onOpenFolder,
   onCloseFolder,
-  onRefresh
+  onRefresh,
+  onOpenAIConfig
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const { theme, setTheme } = useAppStore();
@@ -130,6 +132,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             },
             { key: 'edit', label: '编辑' },
             { key: 'view', label: '查看' },
+            { 
+              key: 'ai', 
+              label: 'AI',
+              children: [
+                {
+                  key: 'model-config',
+                  label: '模型配置',
+                  onClick: onOpenAIConfig
+                }
+              ]
+            },
             { 
               key: 'theme', 
               label: '主题',
