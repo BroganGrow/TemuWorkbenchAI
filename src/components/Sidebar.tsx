@@ -188,7 +188,11 @@ export function Sidebar() {
       display: 'flex', 
       flexDirection: 'column',
       borderRight: '1px solid var(--border-color)',
-      background: 'var(--bg-secondary)'
+      background: 'var(--bg-secondary)',
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+      MozUserSelect: 'none',
+      msUserSelect: 'none'
     }}>
       {/* 侧边栏头部 */}
       <div style={{ 
