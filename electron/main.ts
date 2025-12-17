@@ -190,3 +190,45 @@ ipcMain.handle('check-file-exists', async (_event, filePath: string) => {
   }
 });
 
+// 窗口控制 IPC 处理器
+ipcMain.on('window-minimize', () => {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  if (focusedWindow) {
+    focusedWindow.minimize();
+  }
+});
+
+ipcMain.on('window-maximize', () => {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  if (focusedWindow) {
+    if (focusedWindow.isMaximized()) {
+      focusedWindow.unmaximize();
+    } else {
+      focusedWindow.maximize();
+    }
+  }
+});
+
+ipcMain.on('window-close', () => {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  if (focusedWindow) {
+    focusedWindow.close();
+  }
+});
+
+ipcMain.handle('window-is-maximized', () => {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  return focusedWindow ? focusedWindow.isMaximized() : false;
+});
+
+// 产品管理相关（预留接口，暂未实现）
+ipcMain.handle('get-next-serial-number', async (_event, rootPath: string, productType: string) => {
+  // 此功能已在前端实现，此处为预留接口
+  return 1;
+});
+
+ipcMain.on('update-menu-path', (_event, folderPath: string | null) => {
+  // 预留接口，用于更新菜单路径
+  console.log('Update menu path:', folderPath);
+});
+

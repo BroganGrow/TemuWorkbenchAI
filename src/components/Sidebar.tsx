@@ -36,7 +36,11 @@ export function Sidebar() {
     return products.filter(p => p.category === categoryKey).length;
   };
 
-  const menuItems = CATEGORIES.map(cat => {
+  // 分离公共素材库和其他分类
+  const assetsCategory = CATEGORIES[0]; // 公共素材库
+  const workflowCategories = CATEGORIES.slice(1); // 其他工作流分类
+
+  const createMenuItem = (cat: typeof CATEGORIES[0]) => {
     const count = getProductCount(cat.key);
     const isSelected = currentCategory === cat.key;
     
@@ -78,7 +82,10 @@ export function Sidebar() {
         </div>
       )
     };
-  });
+  };
+
+  const assetsMenuItem = [createMenuItem(assetsCategory)];
+  const workflowMenuItems = workflowCategories.map(createMenuItem);
 
   return (
     <div style={{ 
@@ -128,22 +135,60 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* 菜单 */}
-      <Menu
-        mode="inline"
-        selectedKeys={[currentCategory]}
-        items={menuItems}
-        onClick={({ key }) => setCurrentCategory(key)}
-        inlineCollapsed={sidebarCollapsed}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          flex: 1,
-          paddingTop: '8px'
-        }}
-        theme={isDark ? "dark" : "light"}
-        className={!isDark ? 'ant-layout-sider-light' : ''}
-      />
+      {/* 菜单容器 */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+        {/* 公共素材库 */}
+        <Menu
+          mode="inline"
+          selectedKeys={[currentCategory]}
+          items={assetsMenuItem}
+          onClick={({ key }) => setCurrentCategory(key)}
+          inlineCollapsed={sidebarCollapsed}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            paddingTop: '8px',
+            paddingBottom: '8px'
+          }}
+          theme={isDark ? "dark" : "light"}
+          className={!isDark ? 'ant-layout-sider-light' : ''}
+        />
+
+        {/* 分隔线 */}
+        <div style={{
+          height: '1px',
+          margin: sidebarCollapsed ? '8px 12px' : '8px 16px',
+          background: 'var(--border-color)',
+          flexShrink: 0
+        }} />
+
+        {/* 工作流分类 */}
+        {!sidebarCollapsed && (
+          <div style={{
+            padding: '8px 16px 4px',
+            fontSize: '12px',
+            color: 'var(--text-secondary)',
+            fontWeight: 500
+          }}>
+            工作流
+          </div>
+        )}
+        
+        <Menu
+          mode="inline"
+          selectedKeys={[currentCategory]}
+          items={workflowMenuItems}
+          onClick={({ key }) => setCurrentCategory(key)}
+          inlineCollapsed={sidebarCollapsed}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            flex: 1
+          }}
+          theme={isDark ? "dark" : "light"}
+          className={!isDark ? 'ant-layout-sider-light' : ''}
+        />
+      </div>
 
       {/* 侧边栏底部信息 */}
       {!sidebarCollapsed && (
