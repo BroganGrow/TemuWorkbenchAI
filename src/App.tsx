@@ -192,13 +192,6 @@ function App() {
         lineHeight: '48px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ 
-            fontSize: '16px', 
-            fontWeight: 600,
-            color: '#fff'
-          }}>
-            SuperTools
-          </div>
           <Menu
             mode="horizontal"
             items={[
