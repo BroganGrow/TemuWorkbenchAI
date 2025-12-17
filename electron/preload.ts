@@ -44,6 +44,7 @@ export interface ElectronAPI {
   getFolderSize: (folderPath: string) => Promise<{ success: boolean; size?: number; error?: string }>;
   showInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
   openFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+  copyFileToClipboard: (filePath: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 // 通过contextBridge暴露API到渲染进程
@@ -71,6 +72,7 @@ const electronAPI: ElectronAPI = {
   getFolderSize: (folderPath: string) => ipcRenderer.invoke('get-folder-size', folderPath),
   showInFolder: (filePath: string) => ipcRenderer.invoke('show-in-folder', filePath),
   openFile: (filePath: string) => ipcRenderer.invoke('open-file', filePath),
+  copyFileToClipboard: (filePath: string) => ipcRenderer.invoke('copy-file-to-clipboard', filePath),
   
   // 窗口控制 API
   windowMinimize: () => ipcRenderer.send('window-minimize'),

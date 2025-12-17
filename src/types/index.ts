@@ -67,6 +67,7 @@ declare global {
       getFolderSize: (folderPath: string) => Promise<{ success: boolean; size?: number; error?: string }>;
       showInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
       openFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+      copyFileToClipboard: (filePath: string) => Promise<{ success: boolean; error?: string }>;
       
       // 窗口控制API
       minimizeWindow: () => void;

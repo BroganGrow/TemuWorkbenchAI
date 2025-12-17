@@ -444,6 +444,43 @@ export function registerIpcHandlers() {
       };
     }
   });
+
+  /**
+   * 复制文件到系统剪贴板
+   */
+  ipcMain.handle('copy-file-to-clipboard', async (_event, filePath: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { clipboard } = await import('electron');
+      
+      if (!await fs.pathExists(filePath)) {
+        return {
+          success: false,
+          error: '文件不存在'
+        };
+      }
+
+      // 将文件路径写入剪贴板
+      // 在 Windows 上使用标准格式
+      if (process.platform === 'win32') {
+        // Windows: 使用 CF_HDROP 格式
+        const nullChar = '\0';
+        const doubleNullChar = '\0\0';
+        // 格式: 文件路径列表，以 \0 分隔，以 \0\0 结尾
+        const filesString = filePath + nullChar + doubleNullChar;
+        clipboard.writeBuffer('FileNameW', Buffer.from(filesString, 'ucs2'));
+      } else {
+        // macOS/Linux: 使用文件 URI
+        clipboard.writeText(`file://${filePath}`);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: (error as Error).message
+      };
+    }
+  });
 }
 
 

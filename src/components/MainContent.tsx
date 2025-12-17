@@ -22,7 +22,8 @@ import {
   RightOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
-  FileMarkdownOutlined
+  FileMarkdownOutlined,
+  CopyOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 
@@ -444,6 +445,22 @@ export function MainContent() {
     }
   };
 
+  const handleCopyFile = async (filePath: string) => {
+    try {
+      if (window.electronAPI?.copyFileToClipboard) {
+        const result = await window.electronAPI.copyFileToClipboard(filePath);
+        if (result.success) {
+          message.success('文件已复制到剪贴板');
+        } else {
+          message.error(result.error || '复制失败');
+        }
+      }
+    } catch (error) {
+      console.error('复制文件失败:', error);
+      message.error('复制文件失败');
+    }
+  };
+
   const handleOpenGoodsInfo = async () => {
     if (!selectedProductData) return;
     
@@ -804,6 +821,13 @@ export function MainContent() {
                           onClick={() => handlePreview(file, index)}
                         />
                       </Tooltip>,
+                      <Tooltip title="复制" key="copy">
+                        <Button 
+                          type="text" 
+                          icon={<CopyOutlined />}
+                          onClick={() => handleCopyFile(file.path)}
+                        />
+                      </Tooltip>,
                       <Tooltip title="在文件夹中显示" key="folder">
                         <Button 
                           type="text" 
@@ -891,6 +915,9 @@ export function MainContent() {
                     actions={[
                       <Tooltip title="预览" key="preview">
                         <EyeOutlined onClick={() => handlePreview(file, index)} />
+                      </Tooltip>,
+                      <Tooltip title="复制" key="copy">
+                        <CopyOutlined onClick={() => handleCopyFile(file.path)} />
                       </Tooltip>,
                       <Tooltip title="在文件夹中显示" key="folder">
                         <FolderOpenOutlined onClick={() => handleOpenInFolder(file)} />
@@ -1144,6 +1171,18 @@ export function MainContent() {
 
               <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
 
+              {/* 复制按钮 */}
+              <Tooltip title="复制文件">
+                <Button
+                  type="text"
+                  icon={<CopyOutlined />}
+                  onClick={() => handleCopyFile(files[currentPreviewIndex]?.path)}
+                  style={{ color: '#fff' }}
+                />
+              </Tooltip>
+
+              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
+
               {/* 全屏按钮 */}
               <Tooltip title="全屏 (F)">
                 <Button
@@ -1308,6 +1347,19 @@ export function MainContent() {
                 />
               </Tooltip>
             </Space>
+
+            <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
+
+            {/* 复制按钮 */}
+            <Tooltip title="复制文件">
+              <Button
+                type="text"
+                icon={<CopyOutlined />}
+                onClick={() => handleCopyFile(files[currentPreviewIndex]?.path)}
+                style={{ color: '#fff' }}
+                size="large"
+              />
+            </Tooltip>
 
             <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
 
