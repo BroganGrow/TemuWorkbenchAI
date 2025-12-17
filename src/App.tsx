@@ -12,7 +12,6 @@ import { NewProductDialog } from './components/NewProductDialog';
 import { WorkspaceInitDialog } from './components/WorkspaceInitDialog';
 import { DropZone } from './components/DropZone';
 import { ThemeToggle } from './components/ThemeToggle';
-import { FolderSelector } from './components/FolderSelector';
 import { ResizableSider } from './components/ResizableSider';
 import { useAppStore } from './store/appStore';
 import { isStandardWorkspace, initWorkspace } from './utils/workspaceInit';
@@ -200,14 +199,47 @@ function App() {
           }}>
             SuperTools
           </div>
-          <FolderSelector
-            currentPath={rootPath}
-            onSelect={handleOpenFolder}
-          />
           <Menu
             mode="horizontal"
             items={[
-              { key: 'file', label: '文件' },
+              { 
+                key: 'file', 
+                label: '文件',
+                children: [
+                  {
+                    key: 'open-folder',
+                    label: '打开文件夹',
+                    icon: <FolderOpenOutlined />,
+                    onClick: handleOpenFolder
+                  },
+                  {
+                    key: 'close-folder',
+                    label: '关闭文件夹',
+                    disabled: !rootPath,
+                    onClick: () => {
+                      setRootPath('');
+                      message.info('已关闭文件夹');
+                    }
+                  },
+                  { type: 'divider' },
+                  {
+                    key: 'current-folder',
+                    label: rootPath ? (
+                      <div style={{ 
+                        maxWidth: '300px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        color: '#8c8c8c',
+                        fontSize: '12px'
+                      }}>
+                        当前: {rootPath}
+                      </div>
+                    ) : '未打开文件夹',
+                    disabled: true
+                  }
+                ]
+              },
               { key: 'edit', label: '编辑' },
               { key: 'view', label: '查看' },
               { key: 'help', label: '帮助' }

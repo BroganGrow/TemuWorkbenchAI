@@ -4,6 +4,10 @@ import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import { registerIpcHandlers } from './ipc-handlers.js';
 
+// 禁用 Electron 开发环境的安全警告（开发用）
+process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
+
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
