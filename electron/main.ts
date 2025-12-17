@@ -77,8 +77,8 @@ function createWindow() {
   // 加载应用
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
-    // 开发环境自动打开调试工具（暂时启用以便调试）
-    mainWindow.webContents.openDevTools();
+    // 开发环境不自动打开调试工具，需要时按 F12 打开
+    // mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
