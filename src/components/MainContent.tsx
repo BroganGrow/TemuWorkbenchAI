@@ -56,6 +56,8 @@ export function MainContent() {
   const [goodsInfoLoading, setGoodsInfoLoading] = useState(false);
   const [isEditingGoodsInfo, setIsEditingGoodsInfo] = useState(false);
   const [saveTimer, setSaveTimer] = useState<NodeJS.Timeout | null>(null);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const selectedProductData = useMemo(() => {
     return products.find(p => p.id === selectedProduct);
@@ -151,6 +153,93 @@ export function MainContent() {
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  // 处理文件拖放
+  const handleDragEnter = (e: React.DragEvent, folderKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverFolder(folderKey);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverFolder(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, folderKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverFolder(null);
+
+    if (!selectedProductData) {
+      message.error('请先选择产品');
+      return;
+    }
+
+    // 获取拖放的文件
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length === 0) {
+      return;
+    }
+
+    // 获取目标文件夹路径
+    const folderKeyMap: Record<string, keyof typeof selectedProductData.subFolders> = {
+      'ref_images': 'ref_images',
+      'ai_raw': 'ai_raw',
+      'ai_handle': 'ai_handle',
+      'final_goods': 'final_goods'
+    };
+
+    const targetFolderKey = folderKeyMap[folderKey];
+    if (!targetFolderKey) {
+      message.error('无效的文件夹');
+      return;
+    }
+
+    const targetFolder = selectedProductData.subFolders[targetFolderKey];
+    if (!targetFolder) {
+      message.error('目标文件夹不存在');
+      return;
+    }
+
+    setImporting(true);
+    try {
+      // 获取文件路径
+      const filePaths = droppedFiles.map(file => (file as any).path);
+      
+      // 调用导入API
+      if (window.electronAPI?.importFiles) {
+        const result = await window.electronAPI.importFiles(filePaths, targetFolder);
+        
+        if (result.success.length > 0) {
+          message.success(`成功导入 ${result.success.length} 个文件`);
+          
+          // 如果当前选中的是目标文件夹，刷新文件列表
+          if (selectedFolder === folderKey) {
+            const fileList = await window.electronAPI.listFiles(targetFolder);
+            const filesOnly = fileList.filter(f => !f.isDirectory);
+            setFiles(filesOnly);
+          }
+        }
+        
+        if (result.failed.length > 0) {
+          message.error(`${result.failed.length} 个文件导入失败`);
+          console.error('导入失败的文件:', result.failed);
+        }
+      }
+    } catch (error) {
+      console.error('导入文件失败:', error);
+      message.error('导入文件失败');
+    } finally {
+      setImporting(false);
+    }
   };
 
   const getFileIcon = (fileName: string) => {
@@ -599,14 +688,35 @@ export function MainContent() {
 
       {/* 文件列表/网格 */}
       {selectedFolder ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        <div 
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
+          onDragEnter={(e) => handleDragEnter(e, selectedFolder)}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, selectedFolder)}
+        >
           <Card
-            title={folderNames[selectedFolder] || selectedFolder}
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>{folderNames[selectedFolder] || selectedFolder}</span>
+                {dragOverFolder === selectedFolder && (
+                  <Tag color="orange" style={{ margin: 0 }}>
+                    拖放文件到这里
+                  </Tag>
+                )}
+              </div>
+            }
             styles={{ 
               body: { 
-                background: '#1f1f1f',
+                background: dragOverFolder === selectedFolder 
+                  ? 'rgba(253, 122, 69, 0.08)' 
+                  : '#1f1f1f',
                 overflow: 'auto',
-                height: '100%'
+                height: '100%',
+                border: dragOverFolder === selectedFolder 
+                  ? '2px dashed #fd7a45' 
+                  : 'none',
+                transition: 'all 0.3s'
               } 
             }}
             extra={
@@ -614,16 +724,44 @@ export function MainContent() {
                 {files.length} 个文件
               </span>
             }
-            style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+            style={{ 
+              height: '100%', 
+              display: 'flex', 
+              flexDirection: 'column',
+              border: dragOverFolder === selectedFolder 
+                ? '2px dashed #fd7a45' 
+                : '1px solid #434343'
+            }}
           >
-          <Spin spinning={loading}>
+          <Spin spinning={loading || importing}>
             {files.length === 0 ? (
               <Empty
-                image={<FileImageOutlined style={{ fontSize: '64px', color: '#8c8c8c' }} />}
-                description="文件夹为空"
+                image={<FileImageOutlined style={{ fontSize: '64px', color: dragOverFolder === selectedFolder ? '#fd7a45' : '#8c8c8c' }} />}
+                description={
+                  <div>
+                    <div>文件夹为空</div>
+                    <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: '8px' }}>
+                      拖拽文件到这里导入
+                    </div>
+                  </div>
+                }
                 style={{ padding: '48px 0' }}
               >
-                <Button type="primary" icon={<FolderOpenOutlined />}>
+                <Button type="primary" icon={<FolderOpenOutlined />} onClick={() => {
+                  if (selectedProductData && selectedFolder) {
+                    const folderKeyMap: Record<string, keyof typeof selectedProductData.subFolders> = {
+                      'ref_images': 'ref_images',
+                      'ai_raw': 'ai_raw',
+                      'ai_handle': 'ai_handle',
+                      'final_goods': 'final_goods'
+                    };
+                    const targetFolderKey = folderKeyMap[selectedFolder];
+                    const folderPath = selectedProductData.subFolders[targetFolderKey];
+                    if (folderPath && window.electronAPI?.showInFolder) {
+                      window.electronAPI.showInFolder(folderPath);
+                    }
+                  }
+                }}>
                   打开文件夹
                 </Button>
               </Empty>
@@ -796,15 +934,28 @@ export function MainContent() {
                 size="small"
                 style={{ 
                   cursor: 'pointer',
-                  background: '#141414'
+                  background: dragOverFolder === folder.key ? 'rgba(253, 122, 69, 0.15)' : '#141414',
+                  border: dragOverFolder === folder.key ? '2px dashed #fd7a45' : '1px solid #434343',
+                  transition: 'all 0.3s'
                 }}
                 styles={{ body: { padding: '16px' } }}
                 onClick={() => useAppStore.getState().setSelectedFolder(folder.key)}
+                onDragEnter={(e) => handleDragEnter(e, folder.key)}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, folder.key)}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '32px' }}>{folder.label.split(' ')[0]}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500 }}>{folder.label}</div>
+                    <div style={{ fontWeight: 500 }}>
+                      {folder.label}
+                      {dragOverFolder === folder.key && (
+                        <span style={{ marginLeft: '8px', fontSize: '12px', color: '#fd7a45' }}>
+                          释放以导入
+                        </span>
+                      )}
+                    </div>
                     <div style={{ 
                       fontSize: '12px', 
                       color: '#8c8c8c',
