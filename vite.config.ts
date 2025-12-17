@@ -25,7 +25,14 @@ export default defineConfig({
         input: path.join(__dirname, 'electron/preload.ts'),
         vite: {
           build: {
-            outDir: 'dist-electron'
+            outDir: 'dist-electron',
+            rollupOptions: {
+              external: ['electron'],
+              output: {
+                format: 'cjs',  // 使用 CommonJS 格式
+                entryFileNames: 'preload.cjs'  // 改为 .cjs 扩展名
+              }
+            }
           }
         }
       },

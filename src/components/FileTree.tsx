@@ -11,10 +11,10 @@ import { useAppStore } from '../store/appStore';
 import { useMemo, useState } from 'react';
 
 const SUB_FOLDERS = [
-  { key: 'ref_images', label: '01_Ref_Images', icon: '📸' },
-  { key: 'ai_raw', label: '02_Ai_Raw', icon: '🤖' },
-  { key: 'ai_handle', label: '03_AI_Handle', icon: '✨' },
-  { key: 'final_goods', label: '04_Final_Goods_Images', icon: '⭐' }
+  { key: 'ref_images', label: '参考图', fullLabel: '01_Ref_Images', icon: '📸' },
+  { key: 'ai_raw', label: 'AI原图', fullLabel: '02_Ai_Raw', icon: '🤖' },
+  { key: 'ai_handle', label: 'AI处理', fullLabel: '03_AI_Handle', icon: '✨' },
+  { key: 'final_goods', label: '最终成品', fullLabel: '04_Final_Goods_Images', icon: '⭐' }
 ];
 
 interface FileTreeProps {
@@ -44,12 +44,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
       icon: <FolderOutlined />,
       children: SUB_FOLDERS.map(folder => ({
         key: `${product.id}-${folder.key}`,
-        title: (
-          <span>
-            <span style={{ marginRight: '8px' }}>{folder.icon}</span>
-            {folder.label}
-          </span>
-        ),
+        title: `${folder.icon} ${folder.label}`,
         icon: <FolderOutlined style={{ fontSize: '14px' }} />,
         isLeaf: true
       }))
@@ -134,7 +129,25 @@ export function FileTree({ onDrop }: FileTreeProps) {
       padding: '16px',
       height: '100%',
       overflow: 'auto'
-    }}>
+    }}
+      className="file-tree-container"
+    >
+      <style>{`
+        .file-tree-container .ant-tree-title {
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          display: inline-block !important;
+          max-width: 100% !important;
+        }
+        .file-tree-container .ant-tree-node-content-wrapper {
+          overflow: hidden !important;
+          max-width: 100% !important;
+        }
+        .file-tree-container .ant-tree-treenode {
+          overflow: hidden !important;
+        }
+      `}</style>
       {treeData.length === 0 ? (
         <div style={{ 
           textAlign: 'center', 
@@ -168,7 +181,14 @@ export function FileTree({ onDrop }: FileTreeProps) {
               menu={{ items: contextMenuItems(node.key as string) }}
               trigger={['contextMenu']}
             >
-              <span style={{ userSelect: 'none' }}>
+              <span style={{ 
+                userSelect: 'none',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                display: 'inline-block',
+                maxWidth: '100%'
+              }}>
                 {node.title as React.ReactNode}
               </span>
             </Dropdown>

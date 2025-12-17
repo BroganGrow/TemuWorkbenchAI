@@ -1,6 +1,7 @@
 import { ipcMain, dialog } from 'electron';
 import fs from 'fs-extra';
 import path from 'path';
+// 修复：返回文件夹和文件
 
 /**
  * 文件导入结果
@@ -31,7 +32,7 @@ function generateUniqueFileName(targetDir: string, originalName: string): string
   let newName = originalName;
   let newPath = path.join(targetDir, newName);
 
-  // 检查文件是否存在，如果存在则添加序号
+  // 检查文件是否存在，如果存在则添加序�?
   while (fs.existsSync(newPath)) {
     const ext = path.extname(originalName);
     const nameWithoutExt = path.basename(originalName, ext);
@@ -44,7 +45,7 @@ function generateUniqueFileName(targetDir: string, originalName: string): string
 }
 
 /**
- * 注册所有IPC处理器
+ * 注册所有IPC处理�?
  */
 export function registerIpcHandlers() {
   /**
@@ -57,7 +58,7 @@ export function registerIpcHandlers() {
     };
 
     try {
-      // 确保目标文件夹存在
+      // 确保目标文件夹存�?
       await fs.ensureDir(targetFolder);
 
       // 逐个处理文件
@@ -67,15 +68,15 @@ export function registerIpcHandlers() {
           if (!await fs.pathExists(filePath)) {
             result.failed.push({
               file: path.basename(filePath),
-              error: '源文件不存在'
+              error: 'Source file does not exist'
             });
             continue;
           }
 
-          // 获取原始文件名
+          // 获取原始文件�?
           const originalName = path.basename(filePath);
           
-          // 生成唯一文件名
+          // 生成唯一文件�?
           const uniqueName = generateUniqueFileName(targetFolder, originalName);
           const targetPath = path.join(targetFolder, uniqueName);
 
@@ -91,7 +92,7 @@ export function registerIpcHandlers() {
         }
       }
     } catch (error) {
-      console.error('导入文件失败:', error);
+      console.error('Import files failed:', error);
       throw error;
     }
 
@@ -99,14 +100,14 @@ export function registerIpcHandlers() {
   });
 
   /**
-   * 打开文件夹选择对话框
+   * 打开文件夹选择对话�?
    */
   ipcMain.handle('select-folder', async (): Promise<string | null> => {
     try {
       const result = await dialog.showOpenDialog({
         properties: ['openDirectory', 'createDirectory'],
-        title: '选择目标文件夹',
-        buttonLabel: '选择'
+        title: 'Select Folder',
+        buttonLabel: 'Select'
       });
 
       if (result.canceled || result.filePaths.length === 0) {
@@ -115,13 +116,13 @@ export function registerIpcHandlers() {
 
       return result.filePaths[0];
     } catch (error) {
-      console.error('选择文件夹失败:', error);
+      console.error('Failed to select folder:', error);
       throw error;
     }
   });
 
   /**
-   * 列出文件夹中的所有文件
+   * 列出文件夹中的所有文�?
    */
   ipcMain.handle('list-files', async (_event, folder: string): Promise<FileInfo[]> => {
     try {
@@ -133,26 +134,29 @@ export function registerIpcHandlers() {
       const files = await fs.readdir(folder);
       const fileInfos: FileInfo[] = [];
 
-      // 获取每个文件的详细信息
+      // 获取每个文件/文件夹的详细信息
       for (const file of files) {
         const filePath = path.join(folder, file);
-        const stats = await fs.stat(filePath);
+        try {
+          const stats = await fs.stat(filePath);
 
-        // 只返回文件，不包括目录
-        if (stats.isFile()) {
+          // 返回文件和文件夹
           fileInfos.push({
             name: file,
             path: filePath,
             size: stats.size,
             createTime: stats.birthtime,
-            modifyTime: stats.mtime
+            modifyTime: stats.mtime,
+            isDirectory: stats.isDirectory()  // 标记是否为目�?
           });
+        } catch (error) {
+          console.error(`Failed to get file info: ${file}`, error);
         }
       }
 
       return fileInfos;
     } catch (error) {
-      console.error('列出文件失败:', error);
+      console.error('List files failed:', error);
       throw error;
     }
   });
@@ -177,11 +181,11 @@ export function registerIpcHandlers() {
    */
   ipcMain.handle('delete-file', async (_event, filePath: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // 检查文件是否存在
+      // 检查文件是否存�?
       if (!await fs.pathExists(filePath)) {
         return {
           success: false,
-          error: '文件不存在'
+          error: 'File does not exist'
         };
       }
 
@@ -196,7 +200,7 @@ export function registerIpcHandlers() {
   });
 
   /**
-   * 重命名文件或文件夹
+   * 重命名文件或文件�?
    */
   ipcMain.handle('rename-path', async (_event, oldPath: string, newPath: string): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -204,7 +208,7 @@ export function registerIpcHandlers() {
       if (!await fs.pathExists(oldPath)) {
         return {
           success: false,
-          error: '源路径不存在'
+          error: 'Source path does not exist'
         };
       }
 
@@ -212,7 +216,7 @@ export function registerIpcHandlers() {
       if (await fs.pathExists(newPath)) {
         return {
           success: false,
-          error: '目标路径已存在'
+          error: 'Target path already exists'
         };
       }
 
@@ -235,7 +239,7 @@ export function registerIpcHandlers() {
       if (!await fs.pathExists(sourcePath)) {
         return {
           success: false,
-          error: '源路径不存在'
+          error: 'Source path does not exist'
         };
       }
 
@@ -243,7 +247,7 @@ export function registerIpcHandlers() {
       if (await fs.pathExists(targetPath)) {
         return {
           success: false,
-          error: '目标路径已存在'
+          error: 'Target path already exists'
         };
       }
 
@@ -289,7 +293,7 @@ export function registerIpcHandlers() {
   });
 
   /**
-   * 批量复制文件（优化版导入）
+   * 批量复制文件（优化版导入�?
    */
   ipcMain.handle('batch-copy-files', async (_event, files: Array<{ source: string; target: string }>): Promise<ImportResult> => {
     const result: ImportResult = {
@@ -327,7 +331,7 @@ export function registerIpcHandlers() {
   });
 
   /**
-   * 删除文件夹
+   * 删除文件�?
    */
   ipcMain.handle('delete-folder', async (_event, folderPath: string): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -335,11 +339,11 @@ export function registerIpcHandlers() {
       if (!await fs.pathExists(folderPath)) {
         return {
           success: false,
-          error: '文件夹不存在'
+          error: 'Folder does not exist'
         };
       }
 
-      // 删除文件夹及其内容
+      // 删除文件夹及其内�?
       await fs.remove(folderPath);
       return { success: true };
     } catch (error) {
@@ -351,14 +355,14 @@ export function registerIpcHandlers() {
   });
 
   /**
-   * 获取文件夹大小
+   * 获取文件夹大�?
    */
   ipcMain.handle('get-folder-size', async (_event, folderPath: string): Promise<{ success: boolean; size?: number; error?: string }> => {
     try {
       if (!await fs.pathExists(folderPath)) {
         return {
           success: false,
-          error: '文件夹不存在'
+          error: 'Folder does not exist'
         };
       }
 
@@ -403,7 +407,7 @@ export function registerIpcHandlers() {
       if (!await fs.pathExists(filePath)) {
         return {
           success: false,
-          error: '路径不存在'
+          error: 'Path does not exist'
         };
       }
 
@@ -427,7 +431,7 @@ export function registerIpcHandlers() {
       if (!await fs.pathExists(filePath)) {
         return {
           success: false,
-          error: '文件不存在'
+          error: 'File does not exist'
         };
       }
 
@@ -441,4 +445,5 @@ export function registerIpcHandlers() {
     }
   });
 }
+
 

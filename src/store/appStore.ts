@@ -42,6 +42,7 @@ export interface AppState {
   setSelectedFolder: (folder: string | null) => void;
   toggleTheme: () => void;
   setRootPath: (path: string) => void;
+  setProducts: (products: ProductNode[]) => void;
   addProduct: (product: ProductNode) => void;
   removeProduct: (productId: string) => void;
   updateProduct: (productId: string, updates: Partial<ProductNode>) => void;
@@ -74,6 +75,8 @@ export const useAppStore = create<AppState>()(
       toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
       
       setRootPath: (path) => set({ rootPath: path }),
+      
+      setProducts: (products) => set({ products }),
       
       addProduct: (product) => set((state) => ({ 
         products: [...state.products, product] 
