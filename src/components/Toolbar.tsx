@@ -1,7 +1,6 @@
 import { Button, Input, Space, Segmented, Tooltip } from 'antd';
 import {
   PlusOutlined,
-  ImportOutlined,
   SearchOutlined,
   UnorderedListOutlined,
   AppstoreOutlined,
@@ -14,10 +13,9 @@ import { useState } from 'react';
 
 interface ToolbarProps {
   onNewProduct: () => void;
-  onImport: () => void;
 }
 
-export function Toolbar({ onNewProduct, onImport }: ToolbarProps) {
+export function Toolbar({ onNewProduct }: ToolbarProps) {
   const { 
     viewMode, 
     setViewMode, 
@@ -84,13 +82,6 @@ export function Toolbar({ onNewProduct, onImport }: ToolbarProps) {
           onClick={onNewProduct}
         >
           新建产品
-        </Button>
-        
-        <Button
-          icon={<ImportOutlined />}
-          onClick={onImport}
-        >
-          导入文件
         </Button>
 
         <Tooltip title="排序方式">

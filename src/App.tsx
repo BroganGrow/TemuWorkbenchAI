@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { Layout, Button, message, Empty, ConfigProvider, theme as antTheme } from 'antd';
 import zhCN from 'antd/es/locale/zh_CN';
 import {
-  SettingOutlined,
   FolderOpenOutlined
 } from '@ant-design/icons';
 import { Sidebar } from './components/Sidebar';
@@ -12,7 +11,6 @@ import { MainContent } from './components/MainContent';
 import { Dashboard } from './components/Dashboard';
 import { NewProductDialog } from './components/NewProductDialog';
 import { WorkspaceInitDialog } from './components/WorkspaceInitDialog';
-import { DropZone } from './components/DropZone';
 import { TitleBar } from './components/TitleBar';
 import { ResizableSider } from './components/ResizableSider';
 import { useAppStore } from './store/appStore';
@@ -23,8 +21,6 @@ import { useNavigationShortcuts } from './hooks/useNavigationShortcuts';
 const { Sider, Content } = Layout;
 
 const LAST_FOLDER_KEY = 'super-tools-last-folder';
-
-type ViewMode = 'workspace' | 'import';
 
 function App() {
   const [appVersion, setAppVersion] = useState<string>('');
@@ -39,7 +35,6 @@ function App() {
     refreshKey,
     triggerRefresh 
   } = useAppStore();
-  const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
   const [workspaceInitDialogOpen, setWorkspaceInitDialogOpen] = useState(false);
   const [initWorkspaceLoading, setInitWorkspaceLoading] = useState(false);
@@ -206,14 +201,6 @@ function App() {
     }
   };
 
-  const handleImport = () => {
-    if (!rootPath) {
-      message.warning('请先打开文件夹');
-      return;
-    }
-    setViewMode('import');
-  };
-
   const handleInitWorkspace = async () => {
     if (!rootPath) return;
     
@@ -333,82 +320,34 @@ function App() {
             </Sider>
 
             {/* 中间文件树区域 - 可调整宽度 */}
-            {viewMode === 'workspace' && currentCategory !== 'Dashboard' && (
+            {currentCategory !== 'Dashboard' && (
               <ResizableSider defaultWidth={280} minWidth={200} maxWidth={600} key={`file-tree-${refreshKey}`}>
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  {/* 工具栏 */}
-                  <div style={{
-                    padding: '12px',
-                    borderBottom: '1px solid var(--border-color)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <div style={{ 
-                      fontSize: '12px', 
-                      color: 'var(--text-secondary)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flex: 1
-                    }}>
-                      {rootPath}
-                    </div>
-                    <Button
-                      type="text"
-                      icon={<SettingOutlined />}
-                      size="small"
-                      onClick={() => setViewMode('import')}
-                    />
-                  </div>
-                  
-                  {/* 文件树 */}
-                  <div style={{ flex: 1, overflow: 'auto' }}>
-                    <FileTree key={`tree-${refreshKey}`} />
-                  </div>
-                </div>
+                <FileTree key={`tree-${refreshKey}`} />
               </ResizableSider>
             )}
 
             {/* 主内容区 */}
             <Layout style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              {viewMode === 'workspace' ? (
-                currentCategory === 'Dashboard' ? (
+              {currentCategory === 'Dashboard' ? (
+                <Content style={{
+                  overflow: 'hidden',
+                  flex: 1,
+                  background: 'var(--bg-primary)'
+                }} key={`dashboard-${refreshKey}`}>
+                  <Dashboard />
+                </Content>
+              ) : (
+                <>
+                  <Toolbar
+                    onNewProduct={() => setNewProductDialogOpen(true)}
+                  />
                   <Content style={{
                     overflow: 'hidden',
-                    flex: 1,
-                    background: 'var(--bg-primary)'
-                  }} key={`dashboard-${refreshKey}`}>
-                    <Dashboard />
+                    flex: 1
+                  }} key={`main-content-${refreshKey}`}>
+                    <MainContent />
                   </Content>
-                ) : (
-                  <>
-                    <Toolbar
-                      onNewProduct={() => setNewProductDialogOpen(true)}
-                      onImport={handleImport}
-                    />
-                    <Content style={{
-                      overflow: 'hidden',
-                      flex: 1
-                    }} key={`main-content-${refreshKey}`}>
-                      <MainContent />
-                    </Content>
-                  </>
-                )
-              ) : (
-                <Content style={{
-                  overflow: 'auto'
-                }}>
-                  <div style={{ padding: '16px' }}>
-                    <Button
-                      onClick={() => setViewMode('workspace')}
-                      style={{ marginBottom: '16px' }}
-                    >
-                      ← 返回工作区
-                    </Button>
-                    <DropZone />
-                  </div>
-                </Content>
+                </>
               )}
             </Layout>
           </>
