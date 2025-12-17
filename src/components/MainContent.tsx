@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space 
+  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input 
 } from 'antd';
+
+const { TextArea } = Input;
 import {
   FileImageOutlined,
   FolderOpenOutlined,
@@ -19,7 +21,8 @@ import {
   LeftOutlined,
   RightOutlined,
   FullscreenOutlined,
-  FullscreenExitOutlined
+  FullscreenExitOutlined,
+  FileMarkdownOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 
@@ -49,10 +52,45 @@ export function MainContent() {
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState<number>(0);
   const [imageScale, setImageScale] = useState<number>(1);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [goodsInfo, setGoodsInfo] = useState<string>('');
+  const [goodsInfoLoading, setGoodsInfoLoading] = useState(false);
+  const [isEditingGoodsInfo, setIsEditingGoodsInfo] = useState(false);
+  const [saveTimer, setSaveTimer] = useState<NodeJS.Timeout | null>(null);
 
   const selectedProductData = useMemo(() => {
     return products.find(p => p.id === selectedProduct);
   }, [products, selectedProduct]);
+
+  // 加载 GoodsInfo.md
+  useEffect(() => {
+    const loadGoodsInfo = async () => {
+      if (!selectedProductData) {
+        setGoodsInfo('');
+        return;
+      }
+
+      setGoodsInfoLoading(true);
+      try {
+        const goodsInfoPath = `${selectedProductData.path}/GoodsInfo.md`;
+        
+        if (window.electronAPI?.readFile) {
+          const result = await window.electronAPI.readFile(goodsInfoPath);
+          if (result.success && result.data) {
+            setGoodsInfo(result.data);
+          } else {
+            setGoodsInfo('');
+          }
+        }
+      } catch (error) {
+        console.error('加载产品信息失败:', error);
+        setGoodsInfo('');
+      } finally {
+        setGoodsInfoLoading(false);
+      }
+    };
+
+    loadGoodsInfo();
+  }, [selectedProductData]);
 
   // 加载文件列表
   useEffect(() => {
@@ -293,6 +331,77 @@ export function MainContent() {
     }
   };
 
+  const handleOpenGoodsInfo = async () => {
+    if (!selectedProductData) return;
+    
+    const goodsInfoPath = `${selectedProductData.path}/GoodsInfo.md`;
+    try {
+      if (window.electronAPI?.openFile) {
+        await window.electronAPI.openFile(goodsInfoPath);
+      }
+    } catch (error) {
+      console.error('打开文件失败:', error);
+      message.error('打开文件失败');
+    }
+  };
+
+  const handleViewGoodsInfo = () => {
+    if (!goodsInfo) {
+      message.info('产品信息为空');
+      return;
+    }
+    
+    setPreviewType('text');
+    setPreviewContent(goodsInfo);
+    setPreviewTitle('GoodsInfo.md');
+    setPreviewVisible(true);
+  };
+
+  // 保存 GoodsInfo.md
+  const saveGoodsInfo = async (content: string) => {
+    if (!selectedProductData) return;
+    
+    const goodsInfoPath = `${selectedProductData.path}/GoodsInfo.md`;
+    try {
+      if (window.electronAPI?.writeFile) {
+        const result = await window.electronAPI.writeFile(goodsInfoPath, content);
+        if (!result.success) {
+          message.error('保存失败');
+        }
+        // 成功时不显示提示
+      }
+    } catch (error) {
+      console.error('保存失败:', error);
+      message.error('保存失败');
+    }
+  };
+
+  // 处理内容变化（带防抖）
+  const handleGoodsInfoChange = (value: string) => {
+    setGoodsInfo(value);
+    
+    // 清除之前的定时器
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+    }
+    
+    // 设置新的定时器，1秒后自动保存
+    const timer = setTimeout(() => {
+      saveGoodsInfo(value);
+    }, 1000);
+    
+    setSaveTimer(timer);
+  };
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+      }
+    };
+  }, [saveTimer]);
+
   if (!selectedProduct) {
     return (
       <div style={{
@@ -335,16 +444,27 @@ export function MainContent() {
 
   return (
     <div style={{ 
-      padding: '24px',
       height: '100%',
-      overflow: 'hidden',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      overflow: 'hidden',
+      padding: '24px',
+      boxSizing: 'border-box'
     }}>
       {/* 产品信息卡片 */}
       <Card
-        style={{ marginBottom: '24px' }}
-        styles={{ body: { background: '#1f1f1f' } }}
+        style={{ 
+          marginBottom: '16px', 
+          flexShrink: 0,
+          maxHeight: '40%',
+          overflow: 'hidden'
+        }}
+        styles={{ 
+          body: { 
+            background: '#1f1f1f',
+            overflow: 'auto'
+          } 
+        }}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Tag color={selectedProductData.type === 'ST' ? 'blue' : 'purple'}>
@@ -387,27 +507,115 @@ export function MainContent() {
               {formatDate(selectedProductData.createdAt)}
             </span>
           </div>
+          
+          {/* GoodsInfo.md 编辑 */}
+          <div style={{ 
+            marginTop: '12px',
+            paddingTop: '12px',
+            borderTop: '1px solid #303030'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              marginBottom: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileMarkdownOutlined style={{ color: '#fd7a45' }} />
+                <span style={{ color: '#8c8c8c', fontSize: '12px' }}>产品信息</span>
+                {isEditingGoodsInfo && (
+                  <Tag color="green" style={{ fontSize: '10px', padding: '0 6px', lineHeight: '18px' }}>
+                    编辑中
+                  </Tag>
+                )}
+              </div>
+              <Space size="small">
+                <Tooltip title="查看完整内容">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<EyeOutlined />}
+                    onClick={handleViewGoodsInfo}
+                    disabled={!goodsInfo || goodsInfoLoading}
+                  >
+                    全屏查看
+                  </Button>
+                </Tooltip>
+                <Tooltip title="用外部编辑器打开">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<FolderOpenOutlined />}
+                    onClick={handleOpenGoodsInfo}
+                  >
+                    打开文件
+                  </Button>
+                </Tooltip>
+              </Space>
+            </div>
+            
+            <Spin spinning={goodsInfoLoading}>
+              <div style={{ 
+                maxHeight: '200px',
+                overflow: 'hidden'
+              }}>
+                <TextArea
+                  value={goodsInfo}
+                  onChange={(e) => handleGoodsInfoChange(e.target.value)}
+                  onFocus={() => setIsEditingGoodsInfo(true)}
+                  onBlur={() => setIsEditingGoodsInfo(false)}
+                  placeholder="点击输入产品信息... 支持 Markdown 格式，自动保存"
+                  autoSize={{ minRows: 3, maxRows: 8 }}
+                  style={{
+                    background: '#141414',
+                    border: '1px solid #303030',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    lineHeight: '1.6',
+                    color: '#d9d9d9',
+                    resize: 'none',
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}
+                  styles={{
+                    textarea: {
+                      color: '#d9d9d9'
+                    }
+                  }}
+                />
+              </div>
+              <div style={{ 
+                fontSize: '11px', 
+                color: '#8c8c8c', 
+                marginTop: '4px',
+                textAlign: 'right'
+              }}>
+                {goodsInfo.length} 字符 · 输入后 1 秒自动保存
+              </div>
+            </Spin>
+          </div>
         </div>
       </Card>
 
       {/* 文件列表/网格 */}
       {selectedFolder ? (
-        <Card
-          title={folderNames[selectedFolder] || selectedFolder}
-          styles={{ 
-            body: { 
-              background: '#1f1f1f',
-              height: 'calc(100vh - 320px)',
-              overflow: 'auto'
-            } 
-          }}
-          extra={
-            <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
-              {files.length} 个文件
-            </span>
-          }
-          style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
-        >
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          <Card
+            title={folderNames[selectedFolder] || selectedFolder}
+            styles={{ 
+              body: { 
+                background: '#1f1f1f',
+                overflow: 'auto',
+                height: '100%'
+              } 
+            }}
+            extra={
+              <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                {files.length} 个文件
+              </span>
+            }
+            style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+          >
           <Spin spinning={loading}>
             {files.length === 0 ? (
               <Empty
@@ -555,16 +763,20 @@ export function MainContent() {
             )}
           </Spin>
         </Card>
+        </div>
       ) : (
-        <Card
-          title="标准文件夹"
-          styles={{ 
-            body: { 
-              background: '#1f1f1f'
-            } 
-          }}
-          style={{ flex: 1, overflow: 'auto' }}
-        >
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          <Card
+            title="标准文件夹"
+            styles={{ 
+              body: { 
+                background: '#1f1f1f',
+                overflow: 'auto',
+                height: '100%'
+              } 
+            }}
+            style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+          >
           <div style={{
             display: 'grid',
             gridTemplateColumns: viewMode === 'grid' 
@@ -610,6 +822,7 @@ export function MainContent() {
             ))}
           </div>
         </Card>
+        </div>
       )}
 
       {/* 预览模态框 */}

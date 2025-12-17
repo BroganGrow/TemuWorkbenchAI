@@ -13,6 +13,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: #141414;
   color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
 }
 
 code {
@@ -23,6 +24,7 @@ code {
 #root {
   width: 100%;
   height: 100vh;
+  overflow: hidden;
 }
 
 /* 滚动条样式 */
@@ -69,4 +71,33 @@ code {
 
 .ant-menu-inline-collapsed .ant-menu-item {
   padding-left: 16px !important;
+}
+
+/* 修复 Card 组件的 flex 布局 */
+.ant-card {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.ant-card-body {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.ant-card-head {
+  flex-shrink: 0 !important;
+}
+
+/* 确保 Layout 组件不产生溢出 */
+.ant-layout {
+  overflow: hidden;
+}
+
+.ant-layout-content {
+  overflow: hidden;
+}
+
+.ant-layout-sider {
+  overflow: hidden;
 }

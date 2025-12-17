@@ -27,7 +27,8 @@ export function Toolbar({ onNewProduct, onImport }: ToolbarProps) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: '16px'
+      gap: '16px',
+      flexShrink: 0
     }}>
       {/* 左侧操作按钮 */}
       <Space size="small">

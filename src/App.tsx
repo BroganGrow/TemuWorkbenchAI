@@ -184,7 +184,7 @@ function App() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {/* 自定义标题栏 */}
       <TitleBar 
         rootPath={rootPath}
@@ -193,7 +193,7 @@ function App() {
         onCloseFolder={handleCloseFolder}
       />
 
-      <Layout>
+      <Layout style={{ flex: 1, overflow: 'hidden' }}>
         {!rootPath ? (
           /* 欢迎页 - 打开文件夹 */
           <div style={{
@@ -278,7 +278,7 @@ function App() {
             )}
 
             {/* 主内容区 */}
-            <Layout style={{ background: '#141414' }}>
+            <Layout style={{ background: '#141414', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {viewMode === 'workspace' ? (
                 <>
                   <Toolbar
@@ -287,7 +287,8 @@ function App() {
                   />
                   <Content style={{
                     background: '#141414',
-                    overflow: 'auto'
+                    overflow: 'hidden',
+                    flex: 1
                   }}>
                     <MainContent />
                   </Content>
