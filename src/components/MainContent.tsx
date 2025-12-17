@@ -378,17 +378,40 @@ export function MainContent() {
       }
     };
 
+    let wheelTimeout: NodeJS.Timeout | null = null;
     const handleWheel = (e: WheelEvent) => {
-      if (!previewVisible || previewType !== 'image' || !e.ctrlKey) return;
+      if (!previewVisible || previewType !== 'image') return;
       
-      e.preventDefault();
-      
-      if (e.deltaY < 0) {
-        // 向上滚动，放大
-        handleZoomIn();
-      } else {
-        // 向下滚动，缩小
-        handleZoomOut();
+      // Ctrl + 滚轮：缩放
+      if (e.ctrlKey) {
+        e.preventDefault();
+        
+        if (e.deltaY < 0) {
+          // 向上滚动，放大
+          handleZoomIn();
+        } else {
+          // 向下滚动，缩小
+          handleZoomOut();
+        }
+      } 
+      // 普通滚轮：切换图片（带防抖）
+      else {
+        e.preventDefault();
+        
+        // 防抖处理：200ms 内只触发一次
+        if (wheelTimeout) return;
+        
+        wheelTimeout = setTimeout(() => {
+          wheelTimeout = null;
+        }, 200);
+        
+        if (e.deltaY < 0) {
+          // 向上滚动，上一张
+          handlePrevImage();
+        } else {
+          // 向下滚动，下一张
+          handleNextImage();
+        }
       }
     };
 
@@ -398,6 +421,7 @@ export function MainContent() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('wheel', handleWheel);
+      if (wheelTimeout) clearTimeout(wheelTimeout);
     };
   }, [previewVisible, previewType, currentPreviewIndex, files]);
 
