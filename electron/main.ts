@@ -7,6 +7,13 @@ import { registerIpcHandlers } from './ipc-handlers.js';
 // 禁用 Electron 开发环境的安全警告（开发用）
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
 
+// 设置标准输出编码为 UTF-8（修复 Windows 终端中文乱码）
+if (process.stdout && typeof process.stdout.setEncoding === 'function') {
+  process.stdout.setEncoding('utf8');
+}
+if (process.stderr && typeof process.stderr.setEncoding === 'function') {
+  process.stderr.setEncoding('utf8');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,21 +45,21 @@ function createWindow() {
   // 窗口准备好后显示
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
-    console.log('✓ 窗口已准备就绪');
-    console.log('✓ Preload 路径:', path.join(__dirname, 'preload.cjs'));
+    console.log('Window ready');
+    console.log('Preload path:', path.join(__dirname, 'preload.cjs'));
   });
 
   // 监听 preload 脚本加载
   mainWindow.webContents.on('did-finish-load', () => {
-    console.log('✓ 页面加载完成');
+    console.log('Page loaded successfully');
     // 测试 API 是否可用
     mainWindow?.webContents.executeJavaScript('typeof window.electronAPI')
-      .then(result => console.log('✓ window.electronAPI 类型:', result))
-      .catch(err => console.error('✗ 检查 API 失败:', err));
+      .then(result => console.log('window.electronAPI type:', result))
+      .catch(err => console.error('Failed to check API:', err));
   });
 
   mainWindow.webContents.on('preload-error', (event, preloadPath, error) => {
-    console.error('✗ Preload 脚本加载失败:', preloadPath, error);
+    console.error('Preload script load failed:', preloadPath, error);
   });
 
   // 注册开发者工具快捷键
