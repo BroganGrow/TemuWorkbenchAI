@@ -16,6 +16,7 @@ import { ResizableSider } from './components/ResizableSider';
 import { useAppStore } from './store/appStore';
 import { isStandardWorkspace, initWorkspace } from './utils/workspaceInit';
 import { loadAllProducts } from './utils/productLoader';
+import { useNavigationShortcuts } from './hooks/useNavigationShortcuts';
 
 const { Sider, Content } = Layout;
 
@@ -31,6 +32,9 @@ function App() {
   const [workspaceInitDialogOpen, setWorkspaceInitDialogOpen] = useState(false);
   const [initWorkspaceLoading, setInitWorkspaceLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // 启用导航快捷键（Alt + ←/→ 和鼠标侧键）
+  useNavigationShortcuts();
 
   useEffect(() => {
     const init = async () => {

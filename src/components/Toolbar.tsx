@@ -5,7 +5,9 @@ import {
   SearchOutlined,
   UnorderedListOutlined,
   AppstoreOutlined,
-  SortAscendingOutlined
+  SortAscendingOutlined,
+  LeftOutlined,
+  RightOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 import { useState } from 'react';
@@ -16,7 +18,16 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ onNewProduct, onImport }: ToolbarProps) {
-  const { viewMode, setViewMode, searchKeyword, setSearchKeyword } = useAppStore();
+  const { 
+    viewMode, 
+    setViewMode, 
+    searchKeyword, 
+    setSearchKeyword,
+    goBack,
+    goForward,
+    canGoBack,
+    canGoForward
+  } = useAppStore();
   const [sortBy, setSortBy] = useState<'name' | 'date'>('date');
 
   return (
@@ -32,6 +43,41 @@ export function Toolbar({ onNewProduct, onImport }: ToolbarProps) {
     }}>
       {/* 左侧操作按钮 */}
       <Space size="small">
+        {/* 前进后退按钮 */}
+        <Space size={4}>
+          <Tooltip title="后退 (Alt + ←)">
+            <Button
+              icon={<LeftOutlined />}
+              disabled={!canGoBack()}
+              onClick={goBack}
+              style={{ 
+                padding: '4px 8px',
+                opacity: canGoBack() ? 1 : 0.4
+              }}
+            />
+          </Tooltip>
+          
+          <Tooltip title="前进 (Alt + →)">
+            <Button
+              icon={<RightOutlined />}
+              disabled={!canGoForward()}
+              onClick={goForward}
+              style={{ 
+                padding: '4px 8px',
+                opacity: canGoForward() ? 1 : 0.4
+              }}
+            />
+          </Tooltip>
+        </Space>
+
+        {/* 分隔线 */}
+        <div style={{ 
+          width: '1px', 
+          height: '20px', 
+          background: '#434343',
+          margin: '0 4px'
+        }} />
+
         <Button
           type="primary"
           icon={<PlusOutlined />}
