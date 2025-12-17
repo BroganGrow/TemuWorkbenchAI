@@ -82,7 +82,7 @@ code {
 .ant-card-body {
   flex: 1 !important;
   min-height: 0 !important;
-  overflow: hidden !important;
+  /* overflow 由内联样式控制，不强制设置 */
 }
 
 .ant-card-head {
