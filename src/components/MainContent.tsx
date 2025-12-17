@@ -54,7 +54,8 @@ export function MainContent() {
     selectedFolder,
     products,
     viewMode,
-    currentCategory
+    currentCategory,
+    aiTitlePrompt
   } = useAppStore();
 
   const { aiModels } = useAppStore();
@@ -598,10 +599,7 @@ export function MainContent() {
 
     setOptimizingTitle(true);
     try {
-      const prompt = `请优化以下 Temu 产品标题，使其更具吸引力，包含高搜索量的关键词，符合 SEO 标准，且通顺自然。
-请直接返回优化后的标题（包含中文和英文，用括号隔开，格式如：中文标题 (English Title)），不要包含其他解释或引导语。
-
-原标题：${currentTitle}`;
+      const prompt = aiTitlePrompt.replace('{title}', currentTitle);
 
       const optimizedTitle = await generateCompletion(aiModels, [
         { role: 'user', content: prompt }

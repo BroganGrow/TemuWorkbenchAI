@@ -85,6 +85,10 @@ export interface AppState {
   setAIModels: (models: AIModel[]) => void;
   updateAIModel: (modelId: string, updates: Partial<AIModel>) => void;
   updateAIProvider: (modelId: string, providerId: string, updates: Partial<AIProvider>) => void;
+  
+  // AI 优化 Prompt
+  aiTitlePrompt: string;
+  setAITitlePrompt: (prompt: string) => void;
 
   // 历史导航
   goBack: () => void;
@@ -173,6 +177,13 @@ export const useAppStore = create<AppState>()(
           return model;
         })
       })),
+
+      aiTitlePrompt: `请优化以下 Temu 产品标题，使其更具吸引力，包含高搜索量的关键词，符合 SEO 标准，且通顺自然。
+请直接返回优化后的标题（包含中文和英文，用括号隔开，格式如：中文标题 (English Title)），不要包含其他解释或引导语。
+
+原标题：{title}`,
+      
+      setAITitlePrompt: (prompt) => set({ aiTitlePrompt: prompt }),
 
       setSelectedProduct: (product, recordHistory = true) => set((state) => {
         const newState: any = { 
@@ -300,7 +311,8 @@ export const useAppStore = create<AppState>()(
         rootPath: state.rootPath,
         sidebarCollapsed: state.sidebarCollapsed,
         viewMode: state.viewMode,
-        aiModels: state.aiModels
+        aiModels: state.aiModels,
+        aiTitlePrompt: state.aiTitlePrompt
       })
     }
   )

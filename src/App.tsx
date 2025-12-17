@@ -13,6 +13,7 @@ import { NewProductDialog } from './components/NewProductDialog';
 import { WorkspaceInitDialog } from './components/WorkspaceInitDialog';
 import { TitleBar } from './components/TitleBar';
 import { AIConfigDialog } from './components/AIConfigDialog';
+import { AIPromptDialog } from './components/AIPromptDialog';
 import { ResizableSider } from './components/ResizableSider';
 import { useAppStore } from './store/appStore';
 import { isStandardWorkspace, initWorkspace } from './utils/workspaceInit';
@@ -39,6 +40,7 @@ function App() {
   const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
   const [workspaceInitDialogOpen, setWorkspaceInitDialogOpen] = useState(false);
   const [aiConfigDialogOpen, setAIConfigDialogOpen] = useState(false);
+  const [aiPromptDialogOpen, setAIPromptDialogOpen] = useState(false);
   const [initWorkspaceLoading, setInitWorkspaceLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -276,6 +278,7 @@ function App() {
         onCloseFolder={handleCloseFolder}
         onRefresh={handleRefresh}
         onOpenAIConfig={() => setAIConfigDialogOpen(true)}
+        onOpenAIPrompt={() => setAIPromptDialogOpen(true)}
       />
 
       <Layout style={{ flex: 1, overflow: 'hidden' }}>
@@ -382,6 +385,12 @@ function App() {
       <AIConfigDialog
         open={aiConfigDialogOpen}
         onCancel={() => setAIConfigDialogOpen(false)}
+      />
+
+      {/* AI 提示词配置对话框 */}
+      <AIPromptDialog
+        open={aiPromptDialogOpen}
+        onCancel={() => setAIPromptDialogOpen(false)}
       />
       </Layout>
       </div>
