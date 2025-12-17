@@ -70,7 +70,17 @@ const electronAPI: ElectronAPI = {
   deleteFolder: (folderPath: string) => ipcRenderer.invoke('delete-folder', folderPath),
   getFolderSize: (folderPath: string) => ipcRenderer.invoke('get-folder-size', folderPath),
   showInFolder: (filePath: string) => ipcRenderer.invoke('show-in-folder', filePath),
-  openFile: (filePath: string) => ipcRenderer.invoke('open-file', filePath)
+  openFile: (filePath: string) => ipcRenderer.invoke('open-file', filePath),
+  
+  // 窗口控制 API
+  windowMinimize: () => ipcRenderer.send('window-minimize'),
+  windowMaximize: () => ipcRenderer.send('window-maximize'),
+  windowClose: () => ipcRenderer.send('window-close'),
+  windowIsMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+  
+  // 产品管理 API
+  getNextSerialNumber: (rootPath: string, productType: string) => ipcRenderer.invoke('get-next-serial-number', rootPath, productType),
+  updateMenuPath: (folderPath: string | null) => ipcRenderer.send('update-menu-path', folderPath)
 };
 
 // 暴露到window对象

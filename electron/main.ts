@@ -30,7 +30,8 @@ function createWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 700,
-    title: '', // 隐藏窗口标题
+    title: '',
+    frame: false, // 使用无边框窗口，自定义标题栏
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

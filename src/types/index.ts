@@ -67,6 +67,16 @@ declare global {
       getFolderSize: (folderPath: string) => Promise<{ success: boolean; size?: number; error?: string }>;
       showInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
       openFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+      
+      // 窗口控制API
+      windowMinimize: () => void;
+      windowMaximize: () => void;
+      windowClose: () => void;
+      windowIsMaximized: () => Promise<boolean>;
+      
+      // 产品管理API
+      getNextSerialNumber: (rootPath: string, productType: string) => Promise<number>;
+      updateMenuPath: (folderPath: string | null) => void;
     };
   }
 }

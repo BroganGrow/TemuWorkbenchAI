@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layout, Menu, Button, message, Empty } from 'antd';
+import { Layout, Button, message, Empty } from 'antd';
 import {
   SettingOutlined,
   FolderOpenOutlined
@@ -11,13 +11,13 @@ import { MainContent } from './components/MainContent';
 import { NewProductDialog } from './components/NewProductDialog';
 import { WorkspaceInitDialog } from './components/WorkspaceInitDialog';
 import { DropZone } from './components/DropZone';
-import { ThemeToggle } from './components/ThemeToggle';
+import { TitleBar } from './components/TitleBar';
 import { ResizableSider } from './components/ResizableSider';
 import { useAppStore } from './store/appStore';
 import { isStandardWorkspace, initWorkspace } from './utils/workspaceInit';
 import { loadAllProducts } from './utils/productLoader';
 
-const { Header, Sider, Content } = Layout;
+const { Sider, Content } = Layout;
 
 const LAST_FOLDER_KEY = 'super-tools-last-folder';
 
@@ -178,77 +178,20 @@ function App() {
     }
   };
 
+  const handleCloseFolder = () => {
+    setRootPath('');
+    message.info('已关闭文件夹');
+  };
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      {/* 顶部菜单栏 */}
-      <Header style={{
-        background: '#1f1f1f',
-        padding: '0 16px',
-        borderBottom: '1px solid #303030',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: '48px',
-        lineHeight: '48px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Menu
-            mode="horizontal"
-            items={[
-              { 
-                key: 'file', 
-                label: '文件',
-                children: [
-                  {
-                    key: 'open-folder',
-                    label: '打开文件夹',
-                    icon: <FolderOpenOutlined />,
-                    onClick: handleOpenFolder
-                  },
-                  {
-                    key: 'close-folder',
-                    label: '关闭文件夹',
-                    disabled: !rootPath,
-                    onClick: () => {
-                      setRootPath('');
-                      message.info('已关闭文件夹');
-                    }
-                  },
-                  { type: 'divider' },
-                  {
-                    key: 'current-folder',
-                    label: rootPath ? (
-                      <div style={{ 
-                        maxWidth: '300px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        color: '#8c8c8c',
-                        fontSize: '12px'
-                      }}>
-                        当前: {rootPath}
-                      </div>
-                    ) : '未打开文件夹',
-                    disabled: true
-                  }
-                ]
-              },
-              { key: 'edit', label: '编辑' },
-              { key: 'view', label: '查看' },
-              { key: 'help', label: '帮助' }
-            ]}
-            style={{ 
-              background: 'transparent',
-              border: 'none',
-              lineHeight: '48px'
-            }}
-          />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <ThemeToggle />
-          <span style={{ fontSize: '12px', color: '#8c8c8c' }}>v{appVersion}</span>
-        </div>
-      </Header>
+      {/* 自定义标题栏 */}
+      <TitleBar 
+        rootPath={rootPath}
+        appVersion={appVersion}
+        onOpenFolder={handleOpenFolder}
+        onCloseFolder={handleCloseFolder}
+      />
 
       <Layout>
         {!rootPath ? (
