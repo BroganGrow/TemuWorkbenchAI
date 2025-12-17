@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message 
+  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space 
 } from 'antd';
 import {
   FileImageOutlined,
@@ -12,7 +12,14 @@ import {
   FilePdfOutlined,
   FileOutlined,
   EyeOutlined,
-  DownloadOutlined
+  DownloadOutlined,
+  ZoomInOutlined,
+  ZoomOutOutlined,
+  UndoOutlined,
+  LeftOutlined,
+  RightOutlined,
+  FullscreenOutlined,
+  FullscreenExitOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 
@@ -39,6 +46,9 @@ export function MainContent() {
   const [previewContent, setPreviewContent] = useState<string>('');
   const [previewType, setPreviewType] = useState<'image' | 'text'>('image');
   const [previewTitle, setPreviewTitle] = useState('');
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState<number>(0);
+  const [imageScale, setImageScale] = useState<number>(1);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
   const selectedProductData = useMemo(() => {
     return products.find(p => p.id === selectedProduct);
@@ -131,11 +141,12 @@ export function MainContent() {
     return ['txt', 'md', 'json', 'xml', 'html', 'css', 'js', 'ts', 'tsx'].includes(ext || '');
   };
 
-  const handlePreview = async (file: FileItem) => {
+  const handlePreview = async (file: FileItem, index?: number) => {
     if (isImageFile(file.name)) {
       setPreviewType('image');
       setPreviewContent(`file://${file.path}`);
       setPreviewTitle(file.name);
+      setCurrentPreviewIndex(index !== undefined ? index : files.findIndex(f => f.path === file.path));
       setPreviewVisible(true);
     } else if (isTextFile(file.name)) {
       try {
@@ -158,6 +169,118 @@ export function MainContent() {
       message.info('此文件类型暂不支持预览');
     }
   };
+
+  // 切换到上一张/下一张图片（不循环）
+  const handlePrevImage = () => {
+    const imageFiles = files.filter(f => isImageFile(f.name));
+    if (imageFiles.length === 0) return;
+    
+    const currentImageIndex = imageFiles.findIndex(f => f.path === files[currentPreviewIndex]?.path);
+    if (currentImageIndex <= 0) return; // 已经是第一张，不切换
+    
+    const prevIndex = currentImageIndex - 1;
+    const prevFile = imageFiles[prevIndex];
+    const fileIndex = files.findIndex(f => f.path === prevFile.path);
+    
+    setPreviewContent(`file://${prevFile.path}`);
+    setPreviewTitle(prevFile.name);
+    setCurrentPreviewIndex(fileIndex);
+    setImageScale(1); // 重置缩放
+  };
+
+  const handleNextImage = () => {
+    const imageFiles = files.filter(f => isImageFile(f.name));
+    if (imageFiles.length === 0) return;
+    
+    const currentImageIndex = imageFiles.findIndex(f => f.path === files[currentPreviewIndex]?.path);
+    if (currentImageIndex >= imageFiles.length - 1) return; // 已经是最后一张，不切换
+    
+    const nextIndex = currentImageIndex + 1;
+    const nextFile = imageFiles[nextIndex];
+    const fileIndex = files.findIndex(f => f.path === nextFile.path);
+    
+    setPreviewContent(`file://${nextFile.path}`);
+    setPreviewTitle(nextFile.name);
+    setCurrentPreviewIndex(fileIndex);
+    setImageScale(1); // 重置缩放
+  };
+
+  // 缩放控制
+  const handleZoomIn = () => {
+    setImageScale(prev => Math.min(prev + 0.25, 5)); // 最大5倍
+  };
+
+  const handleZoomOut = () => {
+    setImageScale(prev => Math.max(prev - 0.25, 0.25)); // 最小0.25倍
+  };
+
+  const handleZoomReset = () => {
+    setImageScale(1);
+  };
+
+  // 全屏控制
+  const handleFullscreen = () => {
+    setIsFullscreen(true);
+  };
+
+  const handleExitFullscreen = () => {
+    setIsFullscreen(false);
+  };
+
+  // 键盘和滚轮事件监听
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!previewVisible || previewType !== 'image') return;
+      
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handlePrevImage();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNextImage();
+      } else if (e.key === 'Escape') {
+        if (isFullscreen) {
+          handleExitFullscreen();
+        } else {
+          setPreviewVisible(false);
+        }
+      } else if (e.key === 'f' || e.key === 'F') {
+        if (!isFullscreen) {
+          handleFullscreen();
+        }
+      }
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!previewVisible || previewType !== 'image' || !e.ctrlKey) return;
+      
+      e.preventDefault();
+      
+      if (e.deltaY < 0) {
+        // 向上滚动，放大
+        handleZoomIn();
+      } else {
+        // 向下滚动，缩小
+        handleZoomOut();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, [previewVisible, previewType, currentPreviewIndex, files]);
+
+  // 重置缩放和全屏当打开新预览时
+  useEffect(() => {
+    if (previewVisible) {
+      setImageScale(1);
+      setIsFullscreen(false);
+    }
+  }, [previewVisible]);
 
   const handleOpenInFolder = async (file: FileItem) => {
     try {
@@ -214,7 +337,9 @@ export function MainContent() {
     <div style={{ 
       padding: '24px',
       height: '100%',
-      overflow: 'auto'
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column'
     }}>
       {/* 产品信息卡片 */}
       <Card
@@ -269,12 +394,19 @@ export function MainContent() {
       {selectedFolder ? (
         <Card
           title={folderNames[selectedFolder] || selectedFolder}
-          styles={{ body: { background: '#1f1f1f' } }}
+          styles={{ 
+            body: { 
+              background: '#1f1f1f',
+              height: 'calc(100vh - 320px)',
+              overflow: 'auto'
+            } 
+          }}
           extra={
             <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
               {files.length} 个文件
             </span>
           }
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
         >
           <Spin spinning={loading}>
             {files.length === 0 ? (
@@ -291,7 +423,7 @@ export function MainContent() {
               // 列表视图
               <List
                 dataSource={files}
-                renderItem={(file) => (
+                renderItem={(file, index) => (
                   <List.Item
                     key={file.path}
                     actions={[
@@ -299,7 +431,7 @@ export function MainContent() {
                         <Button 
                           type="text" 
                           icon={<EyeOutlined />}
-                          onClick={() => handlePreview(file)}
+                          onClick={() => handlePreview(file, index)}
                         />
                       </Tooltip>,
                       <Tooltip title="在文件夹中显示" key="folder">
@@ -346,7 +478,7 @@ export function MainContent() {
                 gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                 gap: '16px'
               }}>
-                {files.map((file) => (
+                {files.map((file, index) => (
                   <Card
                     key={file.path}
                     hoverable
@@ -388,7 +520,7 @@ export function MainContent() {
                     }
                     actions={[
                       <Tooltip title="预览" key="preview">
-                        <EyeOutlined onClick={() => handlePreview(file)} />
+                        <EyeOutlined onClick={() => handlePreview(file, index)} />
                       </Tooltip>,
                       <Tooltip title="在文件夹中显示" key="folder">
                         <FolderOpenOutlined onClick={() => handleOpenInFolder(file)} />
@@ -426,7 +558,12 @@ export function MainContent() {
       ) : (
         <Card
           title="标准文件夹"
-          styles={{ body: { background: '#1f1f1f' } }}
+          styles={{ 
+            body: { 
+              background: '#1f1f1f'
+            } 
+          }}
+          style={{ flex: 1, overflow: 'auto' }}
         >
           <div style={{
             display: 'grid',
@@ -476,32 +613,157 @@ export function MainContent() {
       )}
 
       {/* 预览模态框 */}
-      <Modal
-        open={previewVisible}
-        title={previewTitle}
-        footer={null}
-        onCancel={() => setPreviewVisible(false)}
-        width={previewType === 'image' ? '80%' : '70%'}
-        centered
-        styles={{
-          body: {
-            maxHeight: '70vh',
-            overflow: 'auto',
-            background: previewType === 'image' ? '#000' : '#1f1f1f'
-          }
-        }}
-      >
-        {previewType === 'image' ? (
-          <div style={{ textAlign: 'center' }}>
-            <img
-              src={previewContent}
-              alt={previewTitle}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '70vh',
-                objectFit: 'contain'
-              }}
-            />
+      {!isFullscreen ? (
+        <Modal
+          open={previewVisible}
+          title={previewTitle}
+          footer={null}
+          onCancel={() => setPreviewVisible(false)}
+          width={previewType === 'image' ? '90%' : '70%'}
+          centered
+          styles={{
+            body: {
+              height: previewType === 'image' ? '75vh' : 'auto',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              background: previewType === 'image' ? '#000' : '#1f1f1f',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }
+          }}
+        >
+          {previewType === 'image' ? (
+            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+              {/* 图片容器 */}
+              <div style={{ 
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: imageScale > 1 ? 'auto' : 'hidden'
+              }}>
+                <img
+                  src={previewContent}
+                  alt={previewTitle}
+                  style={{
+                    maxWidth: imageScale === 1 ? '100%' : 'none',
+                    maxHeight: imageScale === 1 ? '100%' : 'none',
+                    width: imageScale === 1 ? 'auto' : 'auto',
+                    height: imageScale === 1 ? 'auto' : 'auto',
+                    transform: `scale(${imageScale})`,
+                    transformOrigin: 'center center',
+                    transition: 'transform 0.2s',
+                    cursor: imageScale > 1 ? 'move' : 'default',
+                    objectFit: 'contain'
+                  }}
+                />
+              </div>
+
+              {/* 控制栏 */}
+              <div style={{
+                position: 'absolute',
+                bottom: '16px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(0, 0, 0, 0.7)',
+                padding: '8px 16px',
+                borderRadius: '24px',
+                display: 'flex',
+                gap: '8px',
+                alignItems: 'center',
+                zIndex: 10
+              }}>
+              {/* 切换按钮 */}
+              <Space size="small">
+                <Tooltip title="上一张 (←)">
+                  <Button
+                    type="text"
+                    icon={<LeftOutlined />}
+                    onClick={handlePrevImage}
+                    disabled={
+                      files.filter(f => isImageFile(f.name))
+                        .findIndex(f => f.path === files[currentPreviewIndex]?.path) <= 0
+                    }
+                    style={{ color: '#fff' }}
+                  />
+                </Tooltip>
+                
+                <span style={{ color: '#fff', fontSize: '12px', padding: '0 8px' }}>
+                  {files.filter(f => isImageFile(f.name))
+                    .findIndex(f => f.path === files[currentPreviewIndex]?.path) + 1}
+                  {' / '}
+                  {files.filter(f => isImageFile(f.name)).length}
+                </span>
+                
+                <Tooltip title="下一张 (→)">
+                  <Button
+                    type="text"
+                    icon={<RightOutlined />}
+                    onClick={handleNextImage}
+                    disabled={
+                      files.filter(f => isImageFile(f.name))
+                        .findIndex(f => f.path === files[currentPreviewIndex]?.path) >= 
+                      files.filter(f => isImageFile(f.name)).length - 1
+                    }
+                    style={{ color: '#fff' }}
+                  />
+                </Tooltip>
+              </Space>
+
+              <div style={{ width: '1px', height: '20px', background: '#434343' }} />
+
+              {/* 缩放按钮 */}
+              <Space size="small">
+                <Tooltip title="放大 (Ctrl + 滚轮)">
+                  <Button
+                    type="text"
+                    icon={<ZoomInOutlined />}
+                    onClick={handleZoomIn}
+                    disabled={imageScale >= 5}
+                    style={{ color: '#fff' }}
+                  />
+                </Tooltip>
+                
+                <span style={{ color: '#fff', fontSize: '12px', minWidth: '45px', textAlign: 'center' }}>
+                  {Math.round(imageScale * 100)}%
+                </span>
+                
+                <Tooltip title="缩小 (Ctrl + 滚轮)">
+                  <Button
+                    type="text"
+                    icon={<ZoomOutOutlined />}
+                    onClick={handleZoomOut}
+                    disabled={imageScale <= 0.25}
+                    style={{ color: '#fff' }}
+                  />
+                </Tooltip>
+                
+                <Tooltip title="重置">
+                  <Button
+                    type="text"
+                    icon={<UndoOutlined />}
+                    onClick={handleZoomReset}
+                    disabled={imageScale === 1}
+                    style={{ color: '#fff' }}
+                  />
+                </Tooltip>
+              </Space>
+
+              <div style={{ width: '1px', height: '20px', background: '#434343' }} />
+
+              {/* 全屏按钮 */}
+              <Tooltip title="全屏 (F)">
+                <Button
+                  type="text"
+                  icon={<FullscreenOutlined />}
+                  onClick={handleFullscreen}
+                  style={{ color: '#fff' }}
+                />
+              </Tooltip>
+            </div>
           </div>
         ) : (
           <pre style={{
@@ -511,13 +773,165 @@ export function MainContent() {
             color: '#fff',
             fontSize: '13px',
             lineHeight: '1.6',
-            maxHeight: '60vh',
+            maxHeight: '70vh',
             overflow: 'auto'
           }}>
             {previewContent}
           </pre>
         )}
       </Modal>
+      ) : null}
+
+      {/* 全屏预览 */}
+      {isFullscreen && previewType === 'image' && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: '#000',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {/* 图片容器 */}
+          <div style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: imageScale > 1 ? 'auto' : 'hidden'
+          }}>
+            <img
+              src={previewContent}
+              alt={previewTitle}
+              style={{
+                maxWidth: imageScale === 1 ? '100%' : 'none',
+                maxHeight: imageScale === 1 ? '100%' : 'none',
+                transform: `scale(${imageScale})`,
+                transformOrigin: 'center center',
+                transition: 'transform 0.2s',
+                cursor: imageScale > 1 ? 'move' : 'default',
+                objectFit: 'contain'
+              }}
+            />
+          </div>
+
+          {/* 控制栏 */}
+          <div style={{
+            position: 'fixed',
+            bottom: '32px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0, 0, 0, 0.8)',
+            padding: '12px 20px',
+            borderRadius: '32px',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'center',
+            zIndex: 10000
+          }}>
+            {/* 切换按钮 */}
+            <Space size="small">
+              <Tooltip title="上一张 (←)">
+                <Button
+                  type="text"
+                  icon={<LeftOutlined />}
+                  onClick={handlePrevImage}
+                  disabled={
+                    files.filter(f => isImageFile(f.name))
+                      .findIndex(f => f.path === files[currentPreviewIndex]?.path) <= 0
+                  }
+                  style={{ color: '#fff' }}
+                  size="large"
+                />
+              </Tooltip>
+              
+              <span style={{ color: '#fff', fontSize: '14px', padding: '0 12px' }}>
+                {files.filter(f => isImageFile(f.name))
+                  .findIndex(f => f.path === files[currentPreviewIndex]?.path) + 1}
+                {' / '}
+                {files.filter(f => isImageFile(f.name)).length}
+              </span>
+              
+              <Tooltip title="下一张 (→)">
+                <Button
+                  type="text"
+                  icon={<RightOutlined />}
+                  onClick={handleNextImage}
+                  disabled={
+                    files.filter(f => isImageFile(f.name))
+                      .findIndex(f => f.path === files[currentPreviewIndex]?.path) >= 
+                    files.filter(f => isImageFile(f.name)).length - 1
+                  }
+                  style={{ color: '#fff' }}
+                  size="large"
+                />
+              </Tooltip>
+            </Space>
+
+            <div style={{ width: '1px', height: '24px', background: '#434343' }} />
+
+            {/* 缩放按钮 */}
+            <Space size="small">
+              <Tooltip title="放大">
+                <Button
+                  type="text"
+                  icon={<ZoomInOutlined />}
+                  onClick={handleZoomIn}
+                  disabled={imageScale >= 5}
+                  style={{ color: '#fff' }}
+                  size="large"
+                />
+              </Tooltip>
+              
+              <span style={{ color: '#fff', fontSize: '14px', minWidth: '50px', textAlign: 'center' }}>
+                {Math.round(imageScale * 100)}%
+              </span>
+              
+              <Tooltip title="缩小">
+                <Button
+                  type="text"
+                  icon={<ZoomOutOutlined />}
+                  onClick={handleZoomOut}
+                  disabled={imageScale <= 0.25}
+                  style={{ color: '#fff' }}
+                  size="large"
+                />
+              </Tooltip>
+              
+              <Tooltip title="重置">
+                <Button
+                  type="text"
+                  icon={<UndoOutlined />}
+                  onClick={handleZoomReset}
+                  disabled={imageScale === 1}
+                  style={{ color: '#fff' }}
+                  size="large"
+                />
+              </Tooltip>
+            </Space>
+
+            <div style={{ width: '1px', height: '24px', background: '#434343' }} />
+
+            {/* 退出全屏 */}
+            <Tooltip title="退出全屏 (ESC)">
+              <Button
+                type="text"
+                icon={<FullscreenExitOutlined />}
+                onClick={handleExitFullscreen}
+                style={{ color: '#fff' }}
+                size="large"
+              />
+            </Tooltip>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
