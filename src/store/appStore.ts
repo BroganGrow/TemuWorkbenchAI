@@ -47,6 +47,9 @@ export interface AppState {
   // 当前历史位置
   historyIndex: number;
 
+  // 刷新计数器（用于触发强制重新加载）
+  refreshKey: number;
+  
   // Actions
   setCurrentCategory: (category: string) => void;
   setSelectedProduct: (product: string | null, recordHistory?: boolean) => void;
@@ -60,6 +63,7 @@ export interface AppState {
   toggleSidebar: () => void;
   setViewMode: (mode: 'list' | 'grid') => void;
   setSearchKeyword: (keyword: string) => void;
+  triggerRefresh: () => void;
   // 历史导航
   goBack: () => void;
   goForward: () => void;
@@ -82,10 +86,13 @@ export const useAppStore = create<AppState>()(
       searchKeyword: '',
       history: [],
       historyIndex: -1,
+      refreshKey: 0,
 
       // Actions
       setCurrentCategory: (category) => set({ currentCategory: category, selectedProduct: null }),
       
+      triggerRefresh: () => set((state) => ({ refreshKey: state.refreshKey + 1 })),
+
       setSelectedProduct: (product, recordHistory = true) => set((state) => {
         const newState: any = { 
           selectedProduct: product, 

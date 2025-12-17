@@ -417,6 +417,16 @@ export function FileTree({ onDrop }: FileTreeProps) {
           onExpand={handleExpand}
           treeData={treeData}
           draggable
+          onDragStart={({ event, node }) => {
+            // 只允许拖拽产品节点（没有连字符的 key）
+            if (isWorkflowCategory && !String(node.key).includes('-')) {
+              event.dataTransfer.setData('productId', String(node.key));
+              event.dataTransfer.setData('sourceCategory', currentCategory);
+              event.dataTransfer.effectAllowed = 'move';
+            } else {
+              event.preventDefault();
+            }
+          }}
           onDrop={onDrop}
           style={{
             background: 'transparent',

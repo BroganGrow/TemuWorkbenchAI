@@ -28,14 +28,23 @@ type ViewMode = 'workspace' | 'import';
 
 function App() {
   const [appVersion, setAppVersion] = useState<string>('');
-  const { sidebarCollapsed, rootPath, setRootPath, setProducts, theme, setTheme, currentCategory } = useAppStore();
+  const { 
+    sidebarCollapsed, 
+    rootPath, 
+    setRootPath, 
+    setProducts, 
+    theme, 
+    setTheme, 
+    currentCategory,
+    refreshKey,
+    triggerRefresh 
+  } = useAppStore();
   const [viewMode, setViewMode] = useState<ViewMode>('workspace');
   const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
   const [workspaceInitDialogOpen, setWorkspaceInitDialogOpen] = useState(false);
   const [initWorkspaceLoading, setInitWorkspaceLoading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); // 用于强制刷新组件
-
+  
   // 启用导航快捷键（Alt + ←/→ 和鼠标侧键）
   useNavigationShortcuts();
 
@@ -232,6 +241,13 @@ function App() {
     message.info('已关闭文件夹');
   };
 
+  // 监听外部刷新请求
+  useEffect(() => {
+    if (rootPath && refreshKey > 0) {
+      loadProducts(rootPath);
+    }
+  }, [refreshKey]);
+
   const handleRefresh = async () => {
     if (rootPath) {
       message.loading({ content: '正在刷新...', key: 'refresh' });
@@ -239,7 +255,7 @@ function App() {
         // 重新加载产品数据
         await loadProducts(rootPath);
         // 增加刷新计数器，强制重新挂载组件
-        setRefreshKey(prev => prev + 1);
+        triggerRefresh();
         message.success({ content: '刷新成功！', key: 'refresh', duration: 2 });
       } catch (error) {
         console.error('刷新失败:', error);

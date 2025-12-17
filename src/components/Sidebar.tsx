@@ -1,4 +1,5 @@
-import { Menu } from 'antd';
+import { Menu, message } from 'antd';
+import { useState } from 'react';
 import {
   InboxOutlined,
   ThunderboltOutlined,
@@ -29,10 +30,55 @@ export function Sidebar() {
     products,
     sidebarCollapsed,
     toggleSidebar,
-    theme
+    theme,
+    rootPath,
+    triggerRefresh
   } = useAppStore();
 
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  const handleMoveProduct = async (productId: string, targetCategory: string) => {
+    // 1. 获取产品信息
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    // 2. 检查是否已经在目标分类
+    if (product.category === targetCategory) return;
+
+    try {
+      // 3. 构建新路径
+      const oldPath = product.path;
+      // 假设路径最后一部分是文件夹名
+      const folderName = oldPath.split(/[\\/]/).pop();
+      if (!folderName) return;
+
+      if (!rootPath) {
+        message.error('根目录未设置');
+        return;
+      }
+
+      // 构建目标路径：rootPath/targetCategory/folderName
+      // 注意：需要处理路径分隔符，这里简单处理，Electron端 fs-extra 会处理
+      const newPath = `${rootPath}/${targetCategory}/${folderName}`;
+
+      // 4. 调用 Electron API 移动文件夹
+      if (window.electronAPI?.movePath) {
+        const result = await window.electronAPI.movePath(oldPath, newPath);
+        if (result.success) {
+          message.success('移动成功');
+          // 5. 触发刷新
+          triggerRefresh();
+        } else {
+          message.error(`移动失败: ${result.error}`);
+        }
+      }
+    } catch (error) {
+      console.error('移动产品失败:', error);
+      message.error('移动失败');
+    }
+  };
 
   const getProductCount = (categoryKey: string) => {
     return products.filter(p => p.category === categoryKey).length;
@@ -67,6 +113,8 @@ export function Sidebar() {
 
     const count = getProductCount(cat.key);
     const isSelected = currentCategory === cat.key;
+    const isWorkflow = workflowCategories.some(c => c.key === cat.key);
+    const isDragOver = dragOverKey === cat.key;
     
     return {
       key: cat.key,
@@ -76,12 +124,34 @@ export function Sidebar() {
         transition: 'color 0.3s'
       }} />,
       label: (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          width: '100%'
-        }}>
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            width: '100%',
+            background: isDragOver ? `${cat.color}20` : 'transparent',
+            borderRadius: '4px',
+            transition: 'background 0.2s'
+          }}
+          onDragOver={(e) => {
+            if (isWorkflow) {
+              e.preventDefault(); // 允许放置
+              setDragOverKey(cat.key);
+            }
+          }}
+          onDragLeave={() => setDragOverKey(null)}
+          onDrop={(e) => {
+            if (isWorkflow) {
+              e.preventDefault();
+              setDragOverKey(null);
+              const productId = e.dataTransfer.getData('productId');
+              if (productId) {
+                handleMoveProduct(productId, cat.key);
+              }
+            }
+          }}
+        >
           <span style={{
             color: isSelected ? (isDark ? '#fff' : 'var(--primary-color)') : 'var(--text-primary)',
             fontWeight: isSelected ? 500 : 400
