@@ -40,7 +40,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
     
     return filteredProducts.map(product => ({
       key: product.id,
-      title: `${product.type} - ${product.name}`,
+      title: `${product.id} - ${product.name}`,  // 显示序号，如：CD006 - 产品名
       icon: <FolderOutlined />,
       children: SUB_FOLDERS.map(folder => ({
         key: `${product.id}-${folder.key}`,
@@ -138,14 +138,21 @@ export function FileTree({ onDrop }: FileTreeProps) {
           text-overflow: ellipsis !important;
           white-space: nowrap !important;
           display: inline-block !important;
-          max-width: 100% !important;
+          max-width: 180px !important;
+          vertical-align: top !important;
         }
         .file-tree-container .ant-tree-node-content-wrapper {
           overflow: hidden !important;
           max-width: 100% !important;
+          flex: 1 !important;
         }
         .file-tree-container .ant-tree-treenode {
           overflow: hidden !important;
+          white-space: nowrap !important;
+        }
+        .file-tree-container .ant-tree-node-content-wrapper .ant-tree-title {
+          flex: 1 !important;
+          min-width: 0 !important;
         }
       `}</style>
       {treeData.length === 0 ? (

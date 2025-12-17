@@ -1,5 +1,5 @@
 import { Modal, Form, Input, Select, Radio, Space, message } from 'antd';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '../store/appStore';
 
 interface NewProductDialogProps {
@@ -27,15 +27,31 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
   const [loading, setLoading] = useState(false);
   const [customType, setCustomType] = useState('');
   const [useCustomType, setUseCustomType] = useState(false);
+  const [preview, setPreview] = useState('CD001_20251217_NoOrigin_6pcs_Candle_蜡烛贴纸');
   const { currentCategory, rootPath } = useAppStore();
+
+  // 更新预览
+  const updatePreview = useCallback(() => {
+    const values = form.getFieldsValue();
+    const productType = useCustomType ? customType : (values.type || 'CD');
+    const hasOrigin = values.hasOrigin || 'NoOrigin';
+    const spec = values.spec || '6pcs';
+    const titleEn = values.titleEn || 'Title';
+    const titleCn = values.titleCn || '标题';
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    
+    const previewText = `${productType}001_${dateStr}_${hasOrigin}_${spec}_${titleEn}_${titleCn}`;
+    setPreview(previewText);
+  }, [form, useCustomType, customType]);
 
   useEffect(() => {
     if (open) {
       form.resetFields();
       setUseCustomType(false);
       setCustomType('');
+      updatePreview();
     }
-  }, [open, form]);
+  }, [open, form, updatePreview]);
 
   const handleSubmit = async () => {
     try {
@@ -93,6 +109,7 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
           type: 'CD',
           hasOrigin: 'NoOrigin',
         }}
+        onValuesChange={updatePreview}
       >
         <Form.Item
           label="产品类型"
@@ -101,7 +118,10 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
           <Space direction="vertical" style={{ width: '100%' }}>
             <Radio.Group
               value={useCustomType ? 'custom' : 'preset'}
-              onChange={(e) => setUseCustomType(e.target.value === 'custom')}
+              onChange={(e) => {
+                setUseCustomType(e.target.value === 'custom');
+                setTimeout(updatePreview, 0);
+              }}
             >
               <Radio value="preset">使用预设类型</Radio>
               <Radio value="custom">自定义类型</Radio>
@@ -123,7 +143,10 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
               <Input
                 placeholder="输入自定义类型缩写（如：BK-书签）"
                 value={customType}
-                onChange={(e) => setCustomType(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  setCustomType(e.target.value.toUpperCase());
+                  setTimeout(updatePreview, 0);
+                }}
                 maxLength={10}
                 style={{ width: '100%' }}
               />
@@ -186,8 +209,13 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
         color: '#666'
       }}>
         <div><strong>预览示例：</strong></div>
-        <div style={{ marginTop: '8px', fontFamily: 'monospace' }}>
-          CD001_20251217_NoOrigin_6pcs_Candle_蜡烛贴纸
+        <div style={{ 
+          marginTop: '8px', 
+          fontFamily: 'monospace',
+          wordBreak: 'break-all',
+          color: '#1890ff'
+        }}>
+          {preview}
         </div>
       </div>
     </Modal>
