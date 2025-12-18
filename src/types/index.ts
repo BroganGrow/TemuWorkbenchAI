@@ -55,6 +55,13 @@ declare global {
       
       // 文件操作API
       importFiles: (files: string[], targetFolder: string, productId?: string) => Promise<ImportResult>;
+      normalizeFileNames: (folderPath: string, productId: string) => Promise<{
+        success: boolean;
+        renamed: Array<{ oldName: string; newName: string }>;
+        skipped: string[];
+        failed: Array<{ file: string; error: string }>;
+        error?: string;
+      }>;
       selectFolder: () => Promise<string | null>;
       listFiles: (folder: string) => Promise<FileInfo[]>;
       createDirectory: (dirPath: string) => Promise<{ success: boolean; error?: string }>;

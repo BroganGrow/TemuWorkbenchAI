@@ -25,7 +25,8 @@ import {
   FileMarkdownOutlined,
   CopyOutlined,
   RobotOutlined,
-  LoadingOutlined
+  LoadingOutlined,
+  FormatPainterOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 import { generateCompletion } from '../utils/aiService';
@@ -76,6 +77,8 @@ export function MainContent() {
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [optimizingTitle, setOptimizingTitle] = useState(false);
+  const [normalizing, setNormalizing] = useState(false);
+  const [normalizeConfirmOpen, setNormalizeConfirmOpen] = useState(false);
   // 编辑产品弹窗状态
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editProductInfo, setEditProductInfo] = useState<{ path: string; folderName: string } | undefined>(undefined);
@@ -324,6 +327,69 @@ export function MainContent() {
       message.error('导入文件失败');
     } finally {
       setImporting(false);
+    }
+  };
+
+  // 批量规范化文件命名 - 打开确认弹窗
+  const handleNormalizeFileNames = () => {
+    if (!selectedProductData || !selectedFolder) {
+      message.warning('请先选择一个文件夹');
+      return;
+    }
+    setNormalizeConfirmOpen(true);
+  };
+
+  // 执行规范化命名
+  const doNormalizeFileNames = async () => {
+    if (!selectedProductData || !selectedFolder) return;
+
+    const folderKeyMap: Record<string, keyof typeof selectedProductData.subFolders> = {
+      'ref_images': 'ref_images',
+      'ai_raw': 'ai_raw',
+      'ai_handle': 'ai_handle',
+      'final_goods': 'final_goods'
+    };
+
+    const targetFolderKey = folderKeyMap[selectedFolder];
+    if (!targetFolderKey) {
+      message.error('无效的文件夹');
+      return;
+    }
+
+    const folderPath = selectedProductData.subFolders[targetFolderKey];
+    const productId = selectedProductData.id;
+
+    setNormalizeConfirmOpen(false);
+    setNormalizing(true);
+    
+    try {
+      const result = await window.electronAPI.normalizeFileNames(folderPath, productId);
+      
+      if (result.success) {
+        if (result.renamed.length > 0) {
+          message.success(`成功重命名 ${result.renamed.length} 个文件`);
+        }
+        if (result.skipped.length > 0) {
+          message.info(`跳过 ${result.skipped.length} 个已规范化的文件`);
+        }
+        
+        // 刷新文件列表
+        const fileList = await window.electronAPI.listFiles(folderPath);
+        const filesOnly = fileList.filter(f => !f.isDirectory);
+        setFiles(filesOnly);
+      } else {
+        message.error(`操作失败: ${result.error}`);
+      }
+      
+      if (result.failed.length > 0) {
+        message.warning(`${result.failed.length} 个文件重命名失败`);
+        console.error('重命名失败的文件:', result.failed);
+      }
+    } catch (error) {
+      console.error('规范化命名失败:', error);
+      message.error('规范化命名失败');
+    } finally {
+      setNormalizing(false);
     }
   };
 
@@ -899,9 +965,22 @@ export function MainContent() {
               } 
             }}
             extra={
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {files.length} 个文件
-              </span>
+              <Space size="small">
+                <Tooltip title="批量规范化文件命名">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={normalizing ? <LoadingOutlined /> : <FormatPainterOutlined />}
+                    onClick={handleNormalizeFileNames}
+                    disabled={files.length === 0 || normalizing || !isWorkflowCategory}
+                  >
+                    规范命名
+                  </Button>
+                </Tooltip>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  {files.length} 个文件
+                </span>
+              </Space>
             }
             style={{ 
               height: '100%', 
@@ -1516,6 +1595,27 @@ export function MainContent() {
         onSuccess={handleEditSuccess}
         editProduct={editProductInfo}
       />
+
+      {/* 规范化命名确认弹窗 */}
+      <Modal
+        title="批量规范化命名"
+        open={normalizeConfirmOpen}
+        onOk={doNormalizeFileNames}
+        onCancel={() => setNormalizeConfirmOpen(false)}
+        okText="开始重命名"
+        cancelText="取消"
+        centered
+      >
+        <div>
+          <p>将对文件夹内所有未规范命名的文件进行重命名。</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
+            命名格式：{selectedProductData?.id}_日期时间_序号.扩展名
+          </p>
+          <p style={{ color: '#ff4d4f', fontSize: '12px' }}>
+            注意：此操作不可撤销，请确保已备份重要文件。
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

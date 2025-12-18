@@ -65,6 +65,18 @@ function generateProductFileName(
 }
 
 /**
+ * 检查文件名是否已经是规范格式
+ * 规范格式: 产品ID_时间戳_序号.扩展名 (如 AD006_20251218-204523-123_001.jpg)
+ */
+function isNormalizedFileName(fileName: string, productId: string): boolean {
+  const ext = path.extname(fileName);
+  const nameWithoutExt = path.basename(fileName, ext);
+  // 匹配格式: AD006_20251218-204523-123_001
+  const pattern = new RegExp(`^${productId}_\\d{8}-\\d{6}-\\d{3}_\\d{3}(_\\d{4})?$`);
+  return pattern.test(nameWithoutExt);
+}
+
+/**
  * 生成唯一的文件名（避免重名）- 保留用于非产品场景
  * 格式: 序号_原文件名
  */
@@ -156,7 +168,89 @@ export function registerIpcHandlers() {
   });
 
   /**
-   * 打开文件夹选择对话�?
+   * 批量规范化重命名文件夹中的文件
+   * @param folderPath 目标文件夹路径
+   * @param productId 产品标识（如 "AD006"）
+   */
+  ipcMain.handle('normalize-file-names', async (
+    _event,
+    folderPath: string,
+    productId: string
+  ): Promise<{
+    success: boolean;
+    renamed: Array<{ oldName: string; newName: string }>;
+    skipped: string[];
+    failed: Array<{ file: string; error: string }>;
+    error?: string;
+  }> => {
+    const result = {
+      success: true,
+      renamed: [] as Array<{ oldName: string; newName: string }>,
+      skipped: [] as string[],
+      failed: [] as Array<{ file: string; error: string }>
+    };
+
+    try {
+      // 检查文件夹是否存在
+      if (!await fs.pathExists(folderPath)) {
+        return { ...result, success: false, error: '文件夹不存在' };
+      }
+
+      // 读取文件夹中的所有文件
+      const items = await fs.readdir(folderPath);
+      const files = [];
+      
+      for (const item of items) {
+        const itemPath = path.join(folderPath, item);
+        const stat = await fs.stat(itemPath);
+        if (stat.isFile()) {
+          files.push(item);
+        }
+      }
+
+      if (files.length === 0) {
+        return { ...result, success: true };
+      }
+
+      // 逐个处理文件
+      let batchIndex = 1;
+      for (const fileName of files) {
+        try {
+          // 检查是否已经是规范格式
+          if (isNormalizedFileName(fileName, productId)) {
+            result.skipped.push(fileName);
+            continue;
+          }
+
+          // 生成新的规范化文件名
+          const newName = generateProductFileName(folderPath, fileName, productId, batchIndex);
+          const oldPath = path.join(folderPath, fileName);
+          const newPath = path.join(folderPath, newName);
+
+          // 重命名文件
+          await fs.rename(oldPath, newPath);
+          
+          result.renamed.push({ oldName: fileName, newName });
+          batchIndex++;
+        } catch (error) {
+          result.failed.push({
+            file: fileName,
+            error: (error as Error).message
+          });
+        }
+      }
+
+      result.success = result.failed.length === 0;
+    } catch (error) {
+      console.error('Normalize file names failed:', error);
+      return { ...result, success: false, error: (error as Error).message };
+    }
+
+    return result;
+  });
+
+  /**
+   * 打开文件夹选择对话框
    */
   ipcMain.handle('select-folder', async (): Promise<string | null> => {
     try {

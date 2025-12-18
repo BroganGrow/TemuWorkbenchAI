@@ -30,6 +30,13 @@ export interface ElectronAPI {
   
   // 文件操作API
   importFiles: (files: string[], targetFolder: string, productId?: string) => Promise<ImportResult>;
+  normalizeFileNames: (folderPath: string, productId: string) => Promise<{
+    success: boolean;
+    renamed: Array<{ oldName: string; newName: string }>;
+    skipped: string[];
+    failed: Array<{ file: string; error: string }>;
+    error?: string;
+  }>;
   selectFolder: () => Promise<string | null>;
   listFiles: (folder: string) => Promise<FileInfo[]>;
   createDirectory: (dirPath: string) => Promise<{ success: boolean; error?: string }>;
@@ -59,6 +66,8 @@ const electronAPI: ElectronAPI = {
   // 文件操作API
   importFiles: (files: string[], targetFolder: string, productId?: string) => 
     ipcRenderer.invoke('import-files', files, targetFolder, productId),
+  normalizeFileNames: (folderPath: string, productId: string) =>
+    ipcRenderer.invoke('normalize-file-names', folderPath, productId),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   listFiles: (folder: string) => ipcRenderer.invoke('list-files', folder),
   createDirectory: (dirPath: string) => ipcRenderer.invoke('create-directory', dirPath),
