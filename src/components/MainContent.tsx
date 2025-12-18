@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input 
 } from 'antd';
@@ -29,6 +29,7 @@ import {
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 import { generateCompletion } from '../utils/aiService';
+import { NewProductDialog } from './NewProductDialog';
 
 interface FileItem {
   name: string;
@@ -75,6 +76,9 @@ export function MainContent() {
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [optimizingTitle, setOptimizingTitle] = useState(false);
+  // 编辑产品弹窗状态
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editProductInfo, setEditProductInfo] = useState<{ path: string; folderName: string } | undefined>(undefined);
 
   // 判断是否是工作流分类
   const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
@@ -87,6 +91,27 @@ export function MainContent() {
     // 普通文件夹：不需要产品数据
     return null;
   }, [products, selectedProduct, currentCategory, isWorkflowCategory]);
+
+  // 打开编辑产品弹窗
+  const handleEditProduct = useCallback(() => {
+    if (!selectedProductData) return;
+    
+    // 从路径中提取文件夹名
+    const pathParts = selectedProductData.path.split(/[/\\]/);
+    const folderName = pathParts[pathParts.length - 1];
+    
+    setEditProductInfo({
+      path: selectedProductData.path,
+      folderName
+    });
+    setEditDialogOpen(true);
+  }, [selectedProductData]);
+
+  // 编辑成功后刷新产品列表
+  const handleEditSuccess = useCallback(() => {
+    // 触发产品列表刷新
+    useAppStore.getState().triggerRefresh();
+  }, []);
 
   // 加载 GoodsInfo.md
   useEffect(() => {
@@ -696,8 +721,8 @@ export function MainContent() {
         }
         extra={
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Tooltip title="编辑">
-              <Button type="text" icon={<EditOutlined />} />
+            <Tooltip title="编辑产品">
+              <Button type="text" icon={<EditOutlined />} onClick={handleEditProduct} />
             </Tooltip>
             <Tooltip title="删除">
               <Button type="text" danger icon={<DeleteOutlined />} />
@@ -1480,6 +1505,14 @@ export function MainContent() {
           </div>
         </div>
       )}
+
+      {/* 编辑产品弹窗 */}
+      <NewProductDialog
+        open={editDialogOpen}
+        onCancel={() => setEditDialogOpen(false)}
+        onSuccess={handleEditSuccess}
+        editProduct={editProductInfo}
+      />
     </div>
   );
 }

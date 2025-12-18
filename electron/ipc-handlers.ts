@@ -200,29 +200,49 @@ export function registerIpcHandlers() {
   });
 
   /**
-   * 重命名文件或文件�?
+   * 重命名文件或文件夹
    */
   ipcMain.handle('rename-path', async (_event, oldPath: string, newPath: string): Promise<{ success: boolean; error?: string }> => {
+    console.log('[rename-path] Handler 被调用');
+    console.log('[rename-path] 参数 - oldPath:', oldPath);
+    console.log('[rename-path] 参数 - newPath:', newPath);
+    
     try {
-      // 检查源路径是否存在
-      if (!await fs.pathExists(oldPath)) {
+      console.log('[rename-path] 开始检查源路径是否存在...');
+      const oldExists = await fs.pathExists(oldPath);
+      console.log('[rename-path] 源路径存在:', oldExists);
+      
+      if (!oldExists) {
         return {
           success: false,
-          error: 'Source path does not exist'
+          error: '源路径不存在'
         };
       }
 
-      // 检查目标路径是否已存在
-      if (await fs.pathExists(newPath)) {
+      console.log('[rename-path] 开始检查目标路径是否存在...');
+      const newExists = await fs.pathExists(newPath);
+      console.log('[rename-path] 目标路径存在:', newExists);
+      
+      if (newExists) {
         return {
           success: false,
-          error: 'Target path already exists'
+          error: '目标路径已存在'
         };
       }
 
-      await fs.rename(oldPath, newPath);
+      console.log('[rename-path] 开始执行重命名...');
+      
+      // 设置超时保护
+      const renamePromise = fs.rename(oldPath, newPath);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('重命名操作超时')), 5000);
+      });
+      
+      await Promise.race([renamePromise, timeoutPromise]);
+      console.log('[rename-path] 重命名成功');
       return { success: true };
     } catch (error) {
+      console.error('[rename-path] 重命名失败:', error);
       return {
         success: false,
         error: (error as Error).message

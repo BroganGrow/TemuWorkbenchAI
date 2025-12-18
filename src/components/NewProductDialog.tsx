@@ -5,10 +5,17 @@ import { LoadingOutlined } from '@ant-design/icons';
 import { chineseToPinyin } from '../utils/pinyinConverter';
 import { ProductTypeSelector } from './ProductTypeGrid';
 
+// 编辑模式下传入的产品信息
+interface EditProductInfo {
+  path: string;           // 产品文件夹完整路径
+  folderName: string;     // 文件夹名称
+}
+
 interface NewProductDialogProps {
   open: boolean;
   onCancel: () => void;
   onSuccess: () => void;
+  editProduct?: EditProductInfo;  // 编辑模式时传入
 }
 
 interface ProductFormData {
@@ -18,6 +25,36 @@ interface ProductFormData {
   titleCn: string;        // 中文标题
   titleEn: string;        // 英文标题
   translateMode: 'english' | 'pinyin';  // 翻译模式
+}
+
+// 解析产品文件夹名称，提取各字段
+function parseProductFolderName(folderName: string): {
+  typeAndSerial: string;
+  type: string;
+  serial: string;
+  date: string;
+  hasOrigin: 'HasOrigin' | 'NoOrigin';
+  spec: string;
+  titleEn: string;
+  titleCn: string;
+} | null {
+  const parts = folderName.split('_');
+  if (parts.length < 6) return null;
+
+  const typeAndSerial = parts[0];
+  const typeMatch = typeAndSerial.match(/^([A-Z]{2,3})(\d{3})$/);
+  if (!typeMatch) return null;
+
+  return {
+    typeAndSerial,
+    type: typeMatch[1],
+    serial: typeMatch[2],
+    date: parts[1],
+    hasOrigin: parts[2] as 'HasOrigin' | 'NoOrigin',
+    spec: parts[3],
+    titleEn: parts[4],
+    titleCn: parts.slice(5).join('_')
+  };
 }
 
 // 移除 PRESET_TYPES
@@ -146,15 +183,19 @@ async function translateToEnglishBackup2(text: string): Promise<string> {
   }
 }
 
-export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialogProps) {
+export function NewProductDialog({ open, onCancel, onSuccess, editProduct }: NewProductDialogProps) {
   const [form] = Form.useForm<ProductFormData>();
   const [loading, setLoading] = useState(false);
   const [translating, setTranslating] = useState(false);
-  // 移除 customType, useCustomType
   const [preview, setPreview] = useState('');
-  const [lastChineseTitle, setLastChineseTitle] = useState(''); // 记录上次翻译的中文标题
-  const [autoFollow, setAutoFollow] = useState(true); // 是否自动跟随中文标题变化
+  const [lastChineseTitle, setLastChineseTitle] = useState('');
+  const [autoFollow, setAutoFollow] = useState(true);
   const { currentCategory, rootPath } = useAppStore();
+  
+  // 编辑模式下解析的产品信息
+  const [parsedProduct, setParsedProduct] = useState<ReturnType<typeof parseProductFolderName>>(null);
+  
+  const isEditMode = !!editProduct;
 
   // 更新预览
   const updatePreview = useCallback(() => {
@@ -164,30 +205,59 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
     const spec = values.spec || '6pcs';
     const titleEn = values.titleEn || 'Title';
     const titleCn = values.titleCn || '标题';
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     
-    const previewText = `${productType}001_${dateStr}_${hasOrigin}_${spec}_${titleEn}_${titleCn}`;
+    // 编辑模式使用原日期和序号，新建模式使用当前日期和 001
+    const dateStr = parsedProduct?.date || new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const serial = parsedProduct?.serial || '001';
+    
+    const previewText = `${productType}${serial}_${dateStr}_${hasOrigin}_${spec}_${titleEn}_${titleCn}`;
     setPreview(previewText);
-  }, [form]);
+  }, [form, parsedProduct]);
 
-  // 只在弹窗打开时初始化
+  // 弹窗打开时初始化
   useEffect(() => {
     if (open) {
       form.resetFields();
       setLastChineseTitle('');
       setAutoFollow(true);
+      setParsedProduct(null);
+      setLoading(false); // 确保 loading 状态重置
       
-      // 延迟设置默认类型
-      setTimeout(() => {
-        const types = useAppStore.getState().productTypes;
-        if (types.length > 0 && !form.getFieldValue('type')) {
-          form.setFieldValue('type', types[0].code);
+      if (editProduct) {
+        // 编辑模式：解析并填充现有产品数据
+        console.log('编辑模式，完整路径:', editProduct.path);
+        console.log('编辑模式，文件夹名:', editProduct.folderName);
+        const parsed = parseProductFolderName(editProduct.folderName);
+        console.log('解析结果:', parsed);
+        
+        if (parsed) {
+          setParsedProduct(parsed);
+          form.setFieldsValue({
+            type: parsed.type,
+            hasOrigin: parsed.hasOrigin,
+            spec: parsed.spec,
+            titleEn: parsed.titleEn,
+            titleCn: parsed.titleCn,
+            translateMode: 'english'
+          });
+          setLastChineseTitle(parsed.titleCn);
+          setTimeout(updatePreview, 0);
+        } else {
+          message.error('无法解析产品文件夹名称，请检查格式是否正确');
         }
-        updatePreview();
-      }, 0);
+      } else {
+        // 新建模式：设置默认类型
+        setTimeout(() => {
+          const types = useAppStore.getState().productTypes;
+          if (types.length > 0 && !form.getFieldValue('type')) {
+            form.setFieldValue('type', types[0].code);
+          }
+          updatePreview();
+        }, 0);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, editProduct]);
 
   // 执行翻译的核心函数
   const performTranslation = async (chineseText: string, forceTranslate: boolean = false) => {
@@ -318,6 +388,8 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
   };
 
   const handleSubmit = async () => {
+    let shouldClose = false;
+    
     try {
       const values = await form.validateFields();
       setLoading(true);
@@ -330,40 +402,102 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
         return;
       }
 
-      // 调用创建产品文件夹的函数
-      const result = await createProductFolder({
-        rootPath,
-        category: currentCategory,
-        type: productType,
-        hasOrigin: values.hasOrigin,
-        spec: values.spec,
-        titleEn: values.titleEn,
-        titleCn: values.titleCn,
-      });
-
-      if (result.success) {
-        message.success(`产品文件夹创建成功: ${result.folderName}`);
-        onSuccess();
-        onCancel();
+      if (isEditMode && editProduct && parsedProduct) {
+        // 编辑模式：重命名文件夹
+        console.log('=== 开始编辑模式 ===');
+        console.log('editProduct:', editProduct);
+        console.log('parsedProduct:', parsedProduct);
+        
+        const dateStr = parsedProduct.date;
+        const serial = parsedProduct.serial;
+        const newFolderName = `${productType}${serial}_${dateStr}_${values.hasOrigin}_${values.spec}_${values.titleEn}_${values.titleCn}`;
+        
+        console.log('新文件夹名:', newFolderName);
+        console.log('原文件夹名:', editProduct.folderName);
+        
+        // 如果文件夹名没有变化，直接关闭
+        if (newFolderName === editProduct.folderName) {
+          console.log('文件夹名未变化');
+          message.info('未做任何修改');
+          shouldClose = true;
+          return;
+        }
+        
+        // 获取父目录路径（统一使用反斜杠，Windows 标准）
+        const normalizedOldPath = editProduct.path.replace(/\//g, '\\');
+        const lastSepIndex = normalizedOldPath.lastIndexOf('\\');
+        const parentPath = normalizedOldPath.substring(0, lastSepIndex);
+        const newPath = `${parentPath}\\${newFolderName}`;
+        
+        console.log('原路径:', normalizedOldPath);
+        console.log('新路径:', newPath);
+        console.log('准备调用 API...');
+        
+        // 调用重命名 API（使用统一后的路径）
+        try {
+          console.log('开始调用 window.electronAPI.renamePath');
+          
+          // 添加超时处理
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('API 调用超时')), 10000); // 10秒超时
+          });
+          
+          const apiPromise = window.electronAPI.renamePath(normalizedOldPath, newPath);
+          
+          const result = await Promise.race([apiPromise, timeoutPromise]) as { success: boolean; error?: string };
+          console.log('API 调用完成，结果:', result);
+          
+          if (result.success) {
+            message.success('产品修改成功');
+            onSuccess();
+            shouldClose = true;
+          } else {
+            message.error(`修改失败: ${result.error || '未知错误'}`);
+          }
+        } catch (apiError) {
+          console.error('API 调用异常:', apiError);
+          message.error(`API 调用失败: ${apiError instanceof Error ? apiError.message : '未知错误'}`);
+        }
       } else {
-        message.error(`创建失败: ${result.error}`);
+        // 新建模式：创建产品文件夹
+        const result = await createProductFolder({
+          rootPath,
+          category: currentCategory,
+          type: productType,
+          hasOrigin: values.hasOrigin,
+          spec: values.spec,
+          titleEn: values.titleEn,
+          titleCn: values.titleCn,
+        });
+
+        if (result.success) {
+          message.success(`产品文件夹创建成功: ${result.folderName}`);
+          onSuccess();
+          shouldClose = true;
+        } else {
+          message.error(`创建失败: ${result.error}`);
+        }
       }
     } catch (error) {
-      console.error('表单验证失败:', error);
+      console.error('操作失败:', error);
+      message.error(`操作失败: ${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setLoading(false);
+      if (shouldClose) {
+        onCancel();
+      }
     }
   };
 
   return (
     <Modal
-      title="新建产品"
+      title={isEditMode ? "修改产品" : "新建产品"}
       open={open}
       onOk={handleSubmit}
       onCancel={onCancel}
       confirmLoading={loading}
       width={600}
-      okText="创建"
+      okText={isEditMode ? "保存" : "创建"}
       cancelText="取消"
       centered
     >

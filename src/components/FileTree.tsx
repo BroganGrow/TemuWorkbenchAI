@@ -12,6 +12,7 @@ import {
 import { useAppStore } from '../store/appStore';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useTreeShortcuts } from '../hooks/useTreeShortcuts';
+import { NewProductDialog } from './NewProductDialog';
 
 const SUB_FOLDERS = [
   { key: 'ref_images', label: '参考图', fullLabel: '01_Ref_Images', icon: '📸' },
@@ -54,6 +55,9 @@ export function FileTree({ onDrop }: FileTreeProps) {
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [autoExpandEnabled, setAutoExpandEnabled] = useState(true);
   const [normalFolders, setNormalFolders] = useState<FileNode[]>([]);
+  // 编辑产品弹窗状态
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editProductInfo, setEditProductInfo] = useState<{ path: string; folderName: string } | undefined>(undefined);
 
   // 判断是否是工作流分类
   const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
@@ -238,11 +242,25 @@ export function FileTree({ onDrop }: FileTreeProps) {
       ];
     }
 
+    // 查找产品数据
+    const product = products.find(p => p.id === nodeKey);
+    
     return [
       {
         key: 'rename',
         icon: <EditOutlined />,
-        label: '重命名'
+        label: '重命名',
+        onClick: () => {
+          if (product) {
+            const pathParts = product.path.split(/[/\\]/);
+            const folderName = pathParts[pathParts.length - 1];
+            setEditProductInfo({
+              path: product.path,
+              folderName
+            });
+            setEditDialogOpen(true);
+          }
+        }
       },
       {
         key: 'move',
@@ -456,6 +474,17 @@ export function FileTree({ onDrop }: FileTreeProps) {
         />
       )}
       </div>
+
+      {/* 编辑产品弹窗 */}
+      <NewProductDialog
+        open={editDialogOpen}
+        onCancel={() => setEditDialogOpen(false)}
+        onSuccess={() => {
+          // 触发产品列表刷新
+          useAppStore.getState().triggerRefresh();
+        }}
+        editProduct={editProductInfo}
+      />
     </div>
   );
 }
