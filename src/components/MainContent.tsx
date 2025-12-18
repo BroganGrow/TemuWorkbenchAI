@@ -92,6 +92,11 @@ export function MainContent() {
   // 图片预览工具条自动隐藏
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const toolbarTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // 预览图片分辨率
+  const [previewResolution, setPreviewResolution] = useState<{ width: number; height: number } | null>(null);
+  // 文件列表图片分辨率缓存
+  const [fileResolutions, setFileResolutions] = useState<Record<string, { width: number; height: number }>>({});
+
   // 工具条位置：'corner' 右下角垂直 | 'center' 底部中央水平（从 localStorage 读取记忆）
   const [toolbarPosition, setToolbarPosition] = useState<'corner' | 'center'>(() => {
     const saved = localStorage.getItem('preview-toolbar-position');
@@ -170,6 +175,9 @@ export function MainContent() {
   // 加载文件列表
   useEffect(() => {
     const loadFiles = async () => {
+      // 切换文件夹时清空分辨率缓存
+      setFileResolutions({});
+      
       // 工作流模式：需要产品数据和子文件夹
       if (isWorkflowCategory) {
         if (!selectedFolder || !selectedProductData) {
@@ -234,6 +242,27 @@ export function MainContent() {
 
     loadFiles();
   }, [selectedFolder, selectedProductData, selectedProduct, isWorkflowCategory]);
+
+  // 加载图片分辨率
+  useEffect(() => {
+    // 找出是图片且尚未加载分辨率的文件
+    const imagesToLoad = files.filter(f => isImageFile(f.name) && !fileResolutions[f.path]);
+    
+    if (imagesToLoad.length === 0) return;
+
+    imagesToLoad.forEach(file => {
+      const img = new window.Image();
+      img.src = `file://${file.path}`;
+      img.onload = () => {
+        setFileResolutions(prev => ({
+          ...prev,
+          [file.path]: { width: img.naturalWidth, height: img.naturalHeight }
+        }));
+      };
+      // 避免死循环：如果加载失败，这里目前没有处理，下次可能会重试
+      // 但由于 useEffect 只依赖 files，files 不变就不会重试，所以是安全的
+    });
+  }, [files]);
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('zh-CN', {
@@ -444,6 +473,7 @@ export function MainContent() {
       setPreviewType('image');
       setPreviewContent(`file://${file.path}`);
       setPreviewTitle(file.name);
+      setPreviewResolution(fileResolutions[file.path] || null); // 尝试从缓存获取
       setCurrentPreviewIndex(index !== undefined ? index : files.findIndex(f => f.path === file.path));
       setPreviewVisible(true);
     } else if (isTextFile(file.name)) {
@@ -482,6 +512,7 @@ export function MainContent() {
     
     setPreviewContent(`file://${prevFile.path}`);
     setPreviewTitle(prevFile.name);
+    setPreviewResolution(fileResolutions[prevFile.path] || null);
     setCurrentPreviewIndex(fileIndex);
     setImageScale(1); // 重置缩放
   };
@@ -499,17 +530,26 @@ export function MainContent() {
     
     setPreviewContent(`file://${nextFile.path}`);
     setPreviewTitle(nextFile.name);
+    setPreviewResolution(fileResolutions[nextFile.path] || null);
     setCurrentPreviewIndex(fileIndex);
     setImageScale(1); // 重置缩放
   };
 
   // 缩放控制
   const handleZoomIn = () => {
-    setImageScale(prev => Math.min(prev + 0.25, 5)); // 最大5倍
+    setImageScale(prev => {
+      // 每次放大 10%
+      const newScale = Math.round((prev + 0.1) * 10) / 10;
+      return Math.min(newScale, 5); // 最大5倍
+    });
   };
 
   const handleZoomOut = () => {
-    setImageScale(prev => Math.max(prev - 0.25, 0.25)); // 最小0.25倍
+    setImageScale(prev => {
+      // 每次缩小 10%
+      const newScale = Math.round((prev - 0.1) * 10) / 10;
+      return Math.max(newScale, 0.1); // 最小0.1倍
+    });
   };
 
   const handleZoomReset = () => {
@@ -1193,6 +1233,11 @@ export function MainContent() {
                         description={
                           <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
                             <span>{formatFileSize(file.size)}</span>
+                            {fileResolutions[file.path] && (
+                              <span style={{ color: 'var(--text-secondary)' }}>
+                                {fileResolutions[file.path].width} x {fileResolutions[file.path].height}
+                              </span>
+                            )}
                             {file.modifyTime && (
                               <span>{formatDate(file.modifyTime)}</span>
                             )}
@@ -1274,7 +1319,12 @@ export function MainContent() {
                         }
                         description={
                           <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                            {formatFileSize(file.size)}
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>{formatFileSize(file.size)}</span>
+                              {fileResolutions[file.path] && (
+                                <span>{fileResolutions[file.path].width}x{fileResolutions[file.path].height}</span>
+                              )}
+                            </div>
                           </div>
                         }
                       />
@@ -1407,7 +1457,7 @@ export function MainContent() {
                     height: imageScale === 1 ? 'auto' : 'auto',
                     transform: `scale(${imageScale})`,
                     transformOrigin: 'center center',
-                    transition: 'transform 0.2s',
+                    transition: 'transform 0.2s ease-out',
                     objectFit: 'contain'
                   }}
                 />
@@ -1650,7 +1700,7 @@ export function MainContent() {
                 maxHeight: imageScale === 1 ? '100%' : 'none',
                 transform: `scale(${imageScale})`,
                 transformOrigin: 'center center',
-                transition: 'transform 0.2s',
+                transition: 'transform 0.2s ease-out',
                 objectFit: 'contain'
               }}
             />
