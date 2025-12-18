@@ -15,10 +15,16 @@ export interface AIModel {
   enabled: boolean;
 }
 
+export interface ProductType {
+  id: string;
+  code: string;
+  name: string;
+}
+
 export interface ProductNode {
   id: string;
   name: string;
-  type: 'ST' | 'CD';
+  type: string;
   category: string;
   path: string;
   subFolders: {
@@ -89,6 +95,13 @@ export interface AppState {
   // AI 优化 Prompt
   aiTitlePrompt: string;
   setAITitlePrompt: (prompt: string) => void;
+
+  // 产品类型管理
+  productTypes: ProductType[];
+  setProductTypes: (types: ProductType[]) => void;
+  addProductType: (type: ProductType) => void;
+  updateProductType: (id: string, updates: Partial<ProductType>) => void;
+  removeProductType: (id: string) => void;
 
   // 历史导航
   goBack: () => void;
@@ -184,6 +197,30 @@ export const useAppStore = create<AppState>()(
 原标题：{title}`,
       
       setAITitlePrompt: (prompt) => set({ aiTitlePrompt: prompt }),
+
+      productTypes: [
+        { id: 'ST', code: 'ST', name: '贴纸' },
+        { id: 'HK', code: 'HK', name: '贺卡' },
+        { id: 'CD', code: 'CD', name: '卡片' },
+        { id: 'WR', code: 'WR', name: '墙纸' },
+        { id: 'SC', code: 'SC', name: '手账' }
+      ],
+
+      setProductTypes: (types) => set({ productTypes: types }),
+
+      addProductType: (type) => set((state) => ({ 
+        productTypes: [...state.productTypes, type] 
+      })),
+
+      updateProductType: (id, updates) => set((state) => ({
+        productTypes: state.productTypes.map(t => 
+          t.id === id ? { ...t, ...updates } : t
+        )
+      })),
+
+      removeProductType: (id) => set((state) => ({
+        productTypes: state.productTypes.filter(t => t.id !== id)
+      })),
 
       setSelectedProduct: (product, recordHistory = true) => set((state) => {
         const newState: any = { 
@@ -312,7 +349,8 @@ export const useAppStore = create<AppState>()(
         sidebarCollapsed: state.sidebarCollapsed,
         viewMode: state.viewMode,
         aiModels: state.aiModels,
-        aiTitlePrompt: state.aiTitlePrompt
+        aiTitlePrompt: state.aiTitlePrompt,
+        productTypes: state.productTypes
       })
     }
   )

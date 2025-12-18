@@ -23,7 +23,7 @@ export async function loadAllProducts(rootPath: string): Promise<ProductNode[]> 
       
       // 过滤出产品文件夹（以类型缩写+数字开头）
       const productFolders = files.filter(f => 
-        f.isDirectory && /^[A-Z]{2}\d{3}_/.test(f.name)
+        f.isDirectory && /^[A-Z]{2,3}\d{3}_/.test(f.name)
       );
       
       // 解析每个产品文件夹
@@ -71,7 +71,7 @@ function parseProductFolder(
   const titleCn = parts.slice(5).join('_'); // 蜡烛贴纸（可能包含下划线）
 
   // 验证类型和序号格式
-  const typeMatch = typeAndSerial.match(/^([A-Z]{2})(\d{3})$/);
+  const typeMatch = typeAndSerial.match(/^([A-Z]{2,3})(\d{3})$/);
   if (!typeMatch) {
     console.warn('产品文件夹类型格式不正确:', folderName);
     return null;
@@ -84,7 +84,7 @@ function parseProductFolder(
   return {
     id: `${type}${serial}`,
     name: titleCn || titleEn, // 优先使用中文名，如果没有则用英文名
-    type: type as 'ST' | 'CD',
+    type: type,
     category,
     path: productPath,
     subFolders: {
@@ -115,7 +115,7 @@ export async function getProductCount(rootPath: string, category: string): Promi
     const categoryPath = `${rootPath}/${category}`;
     const files = await window.electronAPI.listFiles(categoryPath);
     const productFolders = files.filter(f => 
-      f.isDirectory && /^[A-Z]{2}\d{3}_/.test(f.name)
+      f.isDirectory && /^[A-Z]{2,3}\d{3}_/.test(f.name)
     );
     return productFolders.length;
   } catch (error) {

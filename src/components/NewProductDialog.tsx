@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '../store/appStore';
 import { LoadingOutlined } from '@ant-design/icons';
 import { chineseToPinyin } from '../utils/pinyinConverter';
+import { ProductTypeSelector } from './ProductTypeGrid';
 
 interface NewProductDialogProps {
   open: boolean;
@@ -19,11 +20,8 @@ interface ProductFormData {
   translateMode: 'english' | 'pinyin';  // 翻译模式
 }
 
-// 预定义的产品类型
-const PRESET_TYPES = [
-  { value: 'CD', label: 'CD - 卡片' },
-  { value: 'ST', label: 'ST - 贴纸' },
-];
+// 移除 PRESET_TYPES
+// const PRESET_TYPES = ...
 
 // 使用谷歌翻译接口翻译中文到英文
 async function translateToEnglish(text: string): Promise<string> {
@@ -152,9 +150,8 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
   const [form] = Form.useForm<ProductFormData>();
   const [loading, setLoading] = useState(false);
   const [translating, setTranslating] = useState(false);
-  const [customType, setCustomType] = useState('');
-  const [useCustomType, setUseCustomType] = useState(false);
-  const [preview, setPreview] = useState('CD001_20251217_NoOrigin_6pcs_Candle_蜡烛贴纸');
+  // 移除 customType, useCustomType
+  const [preview, setPreview] = useState('');
   const [lastChineseTitle, setLastChineseTitle] = useState(''); // 记录上次翻译的中文标题
   const [autoFollow, setAutoFollow] = useState(true); // 是否自动跟随中文标题变化
   const { currentCategory, rootPath } = useAppStore();
@@ -162,7 +159,7 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
   // 更新预览
   const updatePreview = useCallback(() => {
     const values = form.getFieldsValue();
-    const productType = useCustomType ? customType : (values.type || 'CD');
+    const productType = values.type || 'CD';
     const hasOrigin = values.hasOrigin || 'NoOrigin';
     const spec = values.spec || '6pcs';
     const titleEn = values.titleEn || 'Title';
@@ -171,18 +168,26 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
     
     const previewText = `${productType}001_${dateStr}_${hasOrigin}_${spec}_${titleEn}_${titleCn}`;
     setPreview(previewText);
-  }, [form, useCustomType, customType]);
+  }, [form]);
 
+  // 只在弹窗打开时初始化
   useEffect(() => {
     if (open) {
       form.resetFields();
-      setUseCustomType(false);
-      setCustomType('');
       setLastChineseTitle('');
-      setAutoFollow(true); // 重置为默认开启自动跟随
-      updatePreview();
+      setAutoFollow(true);
+      
+      // 延迟设置默认类型
+      setTimeout(() => {
+        const types = useAppStore.getState().productTypes;
+        if (types.length > 0 && !form.getFieldValue('type')) {
+          form.setFieldValue('type', types[0].code);
+        }
+        updatePreview();
+      }, 0);
     }
-  }, [open, form, updatePreview]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // 执行翻译的核心函数
   const performTranslation = async (chineseText: string, forceTranslate: boolean = false) => {
@@ -318,7 +323,7 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
       setLoading(true);
 
       // 获取实际使用的类型
-      const productType = useCustomType ? customType : values.type;
+      const productType = values.type;
       
       if (!productType) {
         message.error('请选择或输入产品类型');
@@ -373,46 +378,12 @@ export function NewProductDialog({ open, onCancel, onSuccess }: NewProductDialog
         onValuesChange={updatePreview}
       >
         <Form.Item
+          name="type"
           label="产品类型"
           required
+          rules={[{ required: true, message: '请选择产品类型' }]}
         >
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <Radio.Group
-              value={useCustomType ? 'custom' : 'preset'}
-              onChange={(e) => {
-                setUseCustomType(e.target.value === 'custom');
-                setTimeout(updatePreview, 0);
-              }}
-            >
-              <Radio value="preset">使用预设类型</Radio>
-              <Radio value="custom">自定义类型</Radio>
-            </Radio.Group>
-
-            {!useCustomType ? (
-              <Form.Item
-                name="type"
-                noStyle
-                rules={[{ required: !useCustomType, message: '请选择产品类型' }]}
-              >
-                <Select
-                  placeholder="选择产品类型"
-                  options={PRESET_TYPES}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            ) : (
-              <Input
-                placeholder="输入自定义类型缩写（如：BK-书签）"
-                value={customType}
-                onChange={(e) => {
-                  setCustomType(e.target.value.toUpperCase());
-                  setTimeout(updatePreview, 0);
-                }}
-                maxLength={10}
-                style={{ width: '100%' }}
-              />
-            )}
-          </Space>
+          <ProductTypeSelector />
         </Form.Item>
 
         <Form.Item

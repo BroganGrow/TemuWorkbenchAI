@@ -18,7 +18,7 @@ const pathUtils = {
 /**
  * 产品类型
  */
-export type ProductType = 'ST' | 'CD';
+export type ProductType = string;
 
 /**
  * 标准子文件夹
@@ -185,13 +185,13 @@ export async function renameProduct(
   try {
     // 提取产品编号
     const oldName = pathUtils.basename(oldPath);
-    const codeMatch = oldName.match(/^(ST|CD\d{3})_/);
+    const codeMatch = oldName.match(/^([A-Z]{2,3})(\d{3})_/);
     
     if (!codeMatch) {
       throw new Error('无法识别产品编号');
     }
 
-    const code = codeMatch[1];
+    const code = codeMatch[0].slice(0, -1); // Remove trailing underscore
     const parentDir = pathUtils.dirname(oldPath);
     const newFolderName = `${code}_${newName}`;
     const newPath = pathUtils.join(parentDir, newFolderName);
