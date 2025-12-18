@@ -1,5 +1,5 @@
 import { Modal, Input, Radio, Space, Switch, Typography, Button, Collapse, theme } from 'antd';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore, AIModel } from '../store/appStore';
 import {
   DndContext, 
@@ -131,6 +131,14 @@ function SortableItem({ model, onUpdateProvider }: SortableItemProps) {
 
 export function AIConfigDialog({ open, onCancel }: AIConfigDialogProps) {
   const { aiModels, setAIModels, updateAIProvider } = useAppStore();
+  const [resetKey, setResetKey] = useState(0);
+
+  // 每次打开弹窗时重置 key，强制 Collapse 恢复折叠状态
+  useEffect(() => {
+    if (open) {
+      setResetKey(prev => prev + 1);
+    }
+  }, [open]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -166,9 +174,9 @@ export function AIConfigDialog({ open, onCancel }: AIConfigDialogProps) {
       ]}
       width={600}
       centered
-      maskClosable={false}
     >
-      <div style={{ marginTop: '24px', maxHeight: '60vh', overflow: 'auto', paddingRight: '4px' }}>
+      {/* resetKey 确保每次打开时 Collapse 都恢复折叠状态 */}
+      <div key={resetKey} style={{ marginTop: '24px', maxHeight: '60vh', overflow: 'auto', paddingRight: '4px' }}>
         <DndContext 
           sensors={sensors}
           collisionDetection={closestCenter}

@@ -96,6 +96,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         {/* 菜单 */}
         <Menu
           mode="horizontal"
+          selectedKeys={[]}
           items={[
             { 
               key: 'file', 
