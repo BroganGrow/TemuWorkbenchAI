@@ -1141,16 +1141,14 @@ export function MainContent() {
                   >
                     <Card.Meta
                       title={
-                        <Tooltip title={file.name}>
-                          <div style={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            fontSize: '13px'
-                          }}>
-                            {file.name}
-                          </div>
-                        </Tooltip>
+                        <div style={{
+                          fontSize: '12px',
+                          lineHeight: '1.4',
+                          wordBreak: 'break-all',
+                          whiteSpace: 'normal'
+                        }}>
+                          {file.name}
+                        </div>
                       }
                       description={
                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
