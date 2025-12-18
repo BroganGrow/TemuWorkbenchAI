@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input, Dropdown, Popconfirm 
 } from 'antd';
@@ -14,19 +14,24 @@ import {
   FilePdfOutlined,
   FileOutlined,
   EyeOutlined,
+  EyeInvisibleOutlined,
   DownloadOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
   UndoOutlined,
   LeftOutlined,
   RightOutlined,
+  UpOutlined,
+  DownOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
   FileMarkdownOutlined,
   CopyOutlined,
   RobotOutlined,
   LoadingOutlined,
-  FormatPainterOutlined
+  FormatPainterOutlined,
+  DragOutlined,
+  PushpinOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 import { generateCompletion } from '../utils/aiService';
@@ -84,6 +89,19 @@ export function MainContent() {
   // 编辑产品弹窗状态
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editProductInfo, setEditProductInfo] = useState<{ path: string; folderName: string } | undefined>(undefined);
+  // 图片预览工具条自动隐藏
+  const [toolbarVisible, setToolbarVisible] = useState(true);
+  const toolbarTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // 工具条位置：'corner' 右下角垂直 | 'center' 底部中央水平（从 localStorage 读取记忆）
+  const [toolbarPosition, setToolbarPosition] = useState<'corner' | 'center'>(() => {
+    const saved = localStorage.getItem('preview-toolbar-position');
+    return (saved === 'center' ? 'center' : 'corner');
+  });
+  // 是否自动隐藏工具条（从 localStorage 读取记忆，默认不隐藏）
+  const [autoHideToolbar, setAutoHideToolbar] = useState<boolean>(() => {
+    const saved = localStorage.getItem('preview-toolbar-auto-hide');
+    return saved === 'true';
+  });
 
   // 判断是否是工作流分类
   const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
@@ -497,6 +515,77 @@ export function MainContent() {
   const handleZoomReset = () => {
     setImageScale(1);
   };
+
+  // 工具条自动隐藏控制
+  const showToolbar = useCallback(() => {
+    setToolbarVisible(true);
+    // 清除之前的定时器
+    if (toolbarTimerRef.current) {
+      clearTimeout(toolbarTimerRef.current);
+    }
+    // 只有开启自动隐藏时才设置定时器
+    if (autoHideToolbar) {
+      toolbarTimerRef.current = setTimeout(() => {
+        setToolbarVisible(false);
+      }, 2000);
+    }
+  }, [autoHideToolbar]);
+
+  // 切换工具条位置（并保存到 localStorage）
+  const toggleToolbarPosition = useCallback(() => {
+    setToolbarPosition(prev => {
+      const newPosition = prev === 'corner' ? 'center' : 'corner';
+      localStorage.setItem('preview-toolbar-position', newPosition);
+      return newPosition;
+    });
+  }, []);
+
+  // 切换自动隐藏（并保存到 localStorage）
+  const toggleAutoHideToolbar = useCallback(() => {
+    setAutoHideToolbar(prev => {
+      const newValue = !prev;
+      localStorage.setItem('preview-toolbar-auto-hide', String(newValue));
+      // 如果关闭自动隐藏，确保工具条显示
+      if (!newValue) {
+        setToolbarVisible(true);
+        if (toolbarTimerRef.current) {
+          clearTimeout(toolbarTimerRef.current);
+          toolbarTimerRef.current = null;
+        }
+      }
+      return newValue;
+    });
+  }, []);
+
+  const handleImageAreaMouseMove = useCallback(() => {
+    showToolbar();
+  }, [showToolbar]);
+
+  const handleToolbarMouseEnter = useCallback(() => {
+    // 鼠标悬停在工具条上时，清除隐藏定时器，保持显示
+    if (toolbarTimerRef.current) {
+      clearTimeout(toolbarTimerRef.current);
+      toolbarTimerRef.current = null;
+    }
+    setToolbarVisible(true);
+  }, []);
+
+  const handleToolbarMouseLeave = useCallback(() => {
+    // 鼠标离开工具条后，重新开始计时隐藏
+    showToolbar();
+  }, [showToolbar]);
+
+  // 预览打开时显示工具条
+  useEffect(() => {
+    if (previewVisible) {
+      showToolbar();
+    }
+    return () => {
+      if (toolbarTimerRef.current) {
+        clearTimeout(toolbarTimerRef.current);
+      }
+    };
+  }, [previewVisible, showToolbar]);
 
   // 全屏控制
   const handleFullscreen = () => {
@@ -1294,7 +1383,10 @@ export function MainContent() {
           }}
         >
           {previewType === 'image' ? (
-            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            <div 
+              style={{ width: '100%', height: '100%', position: 'relative', cursor: 'none' }}
+              onMouseMove={handleImageAreaMouseMove}
+            >
               {/* 图片容器 */}
               <div style={{ 
                 width: '100%',
@@ -1302,7 +1394,8 @@ export function MainContent() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                overflow: imageScale > 1 ? 'auto' : 'hidden'
+                overflow: imageScale > 1 ? 'auto' : 'hidden',
+                cursor: toolbarVisible ? (imageScale > 1 ? 'move' : 'default') : 'none'
               }}>
                 <img
                   src={previewContent}
@@ -1315,127 +1408,193 @@ export function MainContent() {
                     transform: `scale(${imageScale})`,
                     transformOrigin: 'center center',
                     transition: 'transform 0.2s',
-                    cursor: imageScale > 1 ? 'move' : 'default',
                     objectFit: 'contain'
                   }}
                 />
               </div>
 
-              {/* 控制栏 */}
-              <div style={{
-                position: 'absolute',
-                bottom: '16px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'rgba(0, 0, 0, 0.75)',
-                backdropFilter: 'blur(8px)',
-                padding: '8px 16px',
-                borderRadius: '24px',
-                display: 'flex',
-                gap: '8px',
-                alignItems: 'center',
-                zIndex: 10
-              }}>
-              {/* 切换按钮 */}
-              <Space size="small">
-                <Tooltip title="上一张 (←)">
+              {/* 控制栏 - 支持两种布局 */}
+              <div 
+                onMouseEnter={handleToolbarMouseEnter}
+                onMouseLeave={handleToolbarMouseLeave}
+                style={{
+                  position: 'absolute',
+                  ...(toolbarPosition === 'corner' ? {
+                    bottom: '16px',
+                    right: '16px',
+                  } : {
+                    bottom: '16px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                  }),
+                  opacity: (autoHideToolbar ? toolbarVisible : true) ? 1 : 0,
+                  pointerEvents: (autoHideToolbar ? toolbarVisible : true) ? 'auto' : 'none',
+                  transition: 'all 0.3s ease-in-out',
+                  background: 'rgba(0, 0, 0, 0.75)',
+                  backdropFilter: 'blur(8px)',
+                  padding: toolbarPosition === 'corner' ? '12px' : '8px 16px',
+                  borderRadius: toolbarPosition === 'corner' ? '12px' : '24px',
+                  display: 'flex',
+                  flexDirection: toolbarPosition === 'corner' ? 'column' : 'row',
+                  gap: toolbarPosition === 'corner' ? '4px' : '8px',
+                  alignItems: 'center',
+                  zIndex: 10
+                }}>
+                {/* 固定/自动隐藏按钮 */}
+                <Tooltip title={autoHideToolbar ? '固定工具条' : '自动隐藏'} placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
                   <Button
                     type="text"
-                    icon={<LeftOutlined />}
-                    onClick={handlePrevImage}
-                    disabled={
-                      files.filter(f => isImageFile(f.name))
-                        .findIndex(f => f.path === files[currentPreviewIndex]?.path) <= 0
-                    }
-                    style={{ color: '#fff' }}
+                    icon={autoHideToolbar ? <EyeInvisibleOutlined /> : <PushpinOutlined />}
+                    onClick={toggleAutoHideToolbar}
+                    style={{ color: autoHideToolbar ? '#fff' : 'var(--ant-color-primary)' }}
+                    size="small"
                   />
                 </Tooltip>
-                
-                <span style={{ color: '#fff', fontSize: '12px', padding: '0 8px' }}>
-                  {files.filter(f => isImageFile(f.name))
-                    .findIndex(f => f.path === files[currentPreviewIndex]?.path) + 1}
-                  {' / '}
-                  {files.filter(f => isImageFile(f.name)).length}
-                </span>
-                
-                <Tooltip title="下一张 (→)">
-                  <Button
-                    type="text"
-                    icon={<RightOutlined />}
-                    onClick={handleNextImage}
-                    disabled={
-                      files.filter(f => isImageFile(f.name))
-                        .findIndex(f => f.path === files[currentPreviewIndex]?.path) >= 
-                      files.filter(f => isImageFile(f.name)).length - 1
-                    }
-                    style={{ color: '#fff' }}
-                  />
-                </Tooltip>
-              </Space>
 
-              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
-
-              {/* 缩放按钮 */}
-              <Space size="small">
-                <Tooltip title="放大 (Ctrl + 滚轮)">
+                {/* 切换位置按钮 */}
+                <Tooltip title={toolbarPosition === 'corner' ? '切换到底部' : '切换到右下角'} placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
                   <Button
                     type="text"
-                    icon={<ZoomInOutlined />}
-                    onClick={handleZoomIn}
-                    disabled={imageScale >= 5}
+                    icon={<DragOutlined />}
+                    onClick={toggleToolbarPosition}
                     style={{ color: '#fff' }}
+                    size="small"
                   />
                 </Tooltip>
-                
-                <span style={{ color: '#fff', fontSize: '12px', minWidth: '45px', textAlign: 'center' }}>
-                  {Math.round(imageScale * 100)}%
-                </span>
-                
-                <Tooltip title="缩小 (Ctrl + 滚轮)">
-                  <Button
-                    type="text"
-                    icon={<ZoomOutOutlined />}
-                    onClick={handleZoomOut}
-                    disabled={imageScale <= 0.25}
-                    style={{ color: '#fff' }}
-                  />
-                </Tooltip>
-                
-                <Tooltip title="重置">
-                  <Button
-                    type="text"
-                    icon={<UndoOutlined />}
-                    onClick={handleZoomReset}
-                    disabled={imageScale === 1}
-                    style={{ color: '#fff' }}
-                  />
-                </Tooltip>
-              </Space>
 
-              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
-
-              {/* 复制按钮 */}
-              <Tooltip title="复制文件">
-                <Button
-                  type="text"
-                  icon={<CopyOutlined />}
-                  onClick={() => handleCopyFile(files[currentPreviewIndex]?.path)}
-                  style={{ color: '#fff' }}
+                <div style={toolbarPosition === 'corner' 
+                  ? { width: '100%', height: '1px', background: 'rgba(255,255,255,0.2)' }
+                  : { width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)' }} 
                 />
-              </Tooltip>
 
-              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
+                {/* 切换图片按钮 */}
+                <Space size="small" direction={toolbarPosition === 'corner' ? 'vertical' : 'horizontal'}>
+                  <Tooltip title="上一张 (←)" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
+                    <Button
+                      type="text"
+                      icon={toolbarPosition === 'corner' ? <UpOutlined /> : <LeftOutlined />}
+                      onClick={handlePrevImage}
+                      disabled={
+                        files.filter(f => isImageFile(f.name))
+                          .findIndex(f => f.path === files[currentPreviewIndex]?.path) <= 0
+                      }
+                      style={{ color: '#fff' }}
+                      size="small"
+                    />
+                  </Tooltip>
+                  
+                  <span style={{ 
+                    color: '#fff', 
+                    fontSize: '11px', 
+                    padding: toolbarPosition === 'corner' ? '2px 0' : '0 8px',
+                    textAlign: 'center',
+                    minWidth: toolbarPosition === 'corner' ? 'auto' : '40px'
+                  }}>
+                    {files.filter(f => isImageFile(f.name))
+                      .findIndex(f => f.path === files[currentPreviewIndex]?.path) + 1}
+                    {' / '}
+                    {files.filter(f => isImageFile(f.name)).length}
+                  </span>
+                  
+                  <Tooltip title="下一张 (→)" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
+                    <Button
+                      type="text"
+                      icon={toolbarPosition === 'corner' ? <DownOutlined /> : <RightOutlined />}
+                      onClick={handleNextImage}
+                      disabled={
+                        files.filter(f => isImageFile(f.name))
+                          .findIndex(f => f.path === files[currentPreviewIndex]?.path) >= 
+                        files.filter(f => isImageFile(f.name)).length - 1
+                      }
+                      style={{ color: '#fff' }}
+                      size="small"
+                    />
+                  </Tooltip>
+                </Space>
 
-              {/* 全屏按钮 */}
-              <Tooltip title="全屏 (F)">
-                <Button
-                  type="text"
-                  icon={<FullscreenOutlined />}
-                  onClick={handleFullscreen}
-                  style={{ color: '#fff' }}
+                <div style={toolbarPosition === 'corner' 
+                  ? { width: '100%', height: '1px', background: 'rgba(255,255,255,0.2)' }
+                  : { width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)' }} 
                 />
-              </Tooltip>
-            </div>
+
+                {/* 缩放按钮 */}
+                <Space size="small" direction={toolbarPosition === 'corner' ? 'vertical' : 'horizontal'}>
+                  <Tooltip title="放大" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
+                    <Button
+                      type="text"
+                      icon={<ZoomInOutlined />}
+                      onClick={handleZoomIn}
+                      disabled={imageScale >= 5}
+                      style={{ color: '#fff' }}
+                      size="small"
+                    />
+                  </Tooltip>
+                  
+                  <span style={{ 
+                    color: '#fff', 
+                    fontSize: '11px', 
+                    minWidth: toolbarPosition === 'corner' ? 'auto' : '40px', 
+                    textAlign: 'center',
+                    padding: toolbarPosition === 'corner' ? '2px 0' : '0'
+                  }}>
+                    {Math.round(imageScale * 100)}%
+                  </span>
+                  
+                  <Tooltip title="缩小" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
+                    <Button
+                      type="text"
+                      icon={<ZoomOutOutlined />}
+                      onClick={handleZoomOut}
+                      disabled={imageScale <= 0.25}
+                      style={{ color: '#fff' }}
+                      size="small"
+                    />
+                  </Tooltip>
+                  
+                  <Tooltip title="重置" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
+                    <Button
+                      type="text"
+                      icon={<UndoOutlined />}
+                      onClick={handleZoomReset}
+                      disabled={imageScale === 1}
+                      style={{ color: '#fff' }}
+                      size="small"
+                    />
+                  </Tooltip>
+                </Space>
+
+                <div style={toolbarPosition === 'corner' 
+                  ? { width: '100%', height: '1px', background: 'rgba(255,255,255,0.2)' }
+                  : { width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)' }} 
+                />
+
+                {/* 复制按钮 */}
+                <Tooltip title="复制文件" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
+                  <Button
+                    type="text"
+                    icon={<CopyOutlined />}
+                    onClick={() => handleCopyFile(files[currentPreviewIndex]?.path)}
+                    style={{ color: '#fff' }}
+                    size="small"
+                  />
+                </Tooltip>
+
+                <div style={toolbarPosition === 'corner' 
+                  ? { width: '100%', height: '1px', background: 'rgba(255,255,255,0.2)' }
+                  : { width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)' }} 
+                />
+
+                {/* 全屏按钮 */}
+                <Tooltip title="全屏 (F)" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
+                  <Button
+                    type="text"
+                    icon={<FullscreenOutlined />}
+                    onClick={handleFullscreen}
+                    style={{ color: '#fff' }}
+                    size="small"
+                  />
+                </Tooltip>
+              </div>
           </div>
         ) : (
           <pre style={{
@@ -1458,6 +1617,7 @@ export function MainContent() {
       {/* 全屏预览 */}
       {isFullscreen && previewType === 'image' && (
         <div
+          onMouseMove={handleImageAreaMouseMove}
           style={{
             position: 'fixed',
             top: 0,
@@ -1468,7 +1628,8 @@ export function MainContent() {
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            cursor: toolbarVisible ? 'default' : 'none'
           }}
         >
           {/* 图片容器 */}
@@ -1478,7 +1639,8 @@ export function MainContent() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            overflow: imageScale > 1 ? 'auto' : 'hidden'
+            overflow: imageScale > 1 ? 'auto' : 'hidden',
+            cursor: toolbarVisible ? (imageScale > 1 ? 'move' : 'default') : 'none'
           }}>
             <img
               src={previewContent}
@@ -1489,33 +1651,71 @@ export function MainContent() {
                 transform: `scale(${imageScale})`,
                 transformOrigin: 'center center',
                 transition: 'transform 0.2s',
-                cursor: imageScale > 1 ? 'move' : 'default',
                 objectFit: 'contain'
               }}
             />
           </div>
 
-          {/* 控制栏 */}
-          <div style={{
-            position: 'fixed',
-            bottom: '32px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(12px)',
-            padding: '12px 20px',
-            borderRadius: '32px',
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'center',
-            zIndex: 10000
-          }}>
-            {/* 切换按钮 */}
-            <Space size="small">
-              <Tooltip title="上一张 (←)">
+          {/* 控制栏 - 支持两种布局 */}
+          <div 
+            onMouseEnter={handleToolbarMouseEnter}
+            onMouseLeave={handleToolbarMouseLeave}
+            style={{
+              position: 'fixed',
+              ...(toolbarPosition === 'corner' ? {
+                bottom: '32px',
+                right: '32px',
+              } : {
+                bottom: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+              }),
+              opacity: (autoHideToolbar ? toolbarVisible : true) ? 1 : 0,
+              pointerEvents: (autoHideToolbar ? toolbarVisible : true) ? 'auto' : 'none',
+              transition: 'all 0.3s ease-in-out',
+              background: 'rgba(0, 0, 0, 0.85)',
+              backdropFilter: 'blur(12px)',
+              padding: toolbarPosition === 'corner' ? '16px' : '12px 20px',
+              borderRadius: toolbarPosition === 'corner' ? '16px' : '32px',
+              display: 'flex',
+              flexDirection: toolbarPosition === 'corner' ? 'column' : 'row',
+              gap: toolbarPosition === 'corner' ? '6px' : '12px',
+              alignItems: 'center',
+              zIndex: 10000
+            }}>
+            {/* 固定/自动隐藏按钮 */}
+            <Tooltip title={autoHideToolbar ? '固定工具条' : '自动隐藏'} placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
+              <Button
+                type="text"
+                icon={autoHideToolbar ? <EyeInvisibleOutlined /> : <PushpinOutlined />}
+                onClick={toggleAutoHideToolbar}
+                style={{ color: autoHideToolbar ? '#fff' : 'var(--ant-color-primary)' }}
+                size="large"
+              />
+            </Tooltip>
+
+            {/* 切换位置按钮 */}
+            <Tooltip title={toolbarPosition === 'corner' ? '切换到底部' : '切换到右下角'} placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
+              <Button
+                type="text"
+                icon={<DragOutlined />}
+                onClick={toggleToolbarPosition}
+                style={{ color: '#fff' }}
+                size="large"
+              />
+            </Tooltip>
+
+            <div style={toolbarPosition === 'corner' 
+              ? { width: '100%', height: '1px', background: 'rgba(255,255,255,0.2)' }
+              : { width: '1px', height: '24px', background: 'rgba(255,255,255,0.2)' }} 
+            />
+
+            {/* 切换图片按钮 */}
+            <Space size="small" direction={toolbarPosition === 'corner' ? 'vertical' : 'horizontal'}>
+              <Tooltip title="上一张 (←)" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
                 <Button
                   type="text"
-                  icon={<LeftOutlined />}
+                  icon={toolbarPosition === 'corner' ? <UpOutlined /> : <LeftOutlined />}
                   onClick={handlePrevImage}
                   disabled={
                     files.filter(f => isImageFile(f.name))
@@ -1526,17 +1726,22 @@ export function MainContent() {
                 />
               </Tooltip>
               
-              <span style={{ color: '#fff', fontSize: '14px', padding: '0 12px' }}>
+              <span style={{ 
+                color: '#fff', 
+                fontSize: '14px', 
+                padding: toolbarPosition === 'corner' ? '4px 0' : '0 12px',
+                textAlign: 'center'
+              }}>
                 {files.filter(f => isImageFile(f.name))
                   .findIndex(f => f.path === files[currentPreviewIndex]?.path) + 1}
                 {' / '}
                 {files.filter(f => isImageFile(f.name)).length}
               </span>
               
-              <Tooltip title="下一张 (→)">
+              <Tooltip title="下一张 (→)" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
                 <Button
                   type="text"
-                  icon={<RightOutlined />}
+                  icon={toolbarPosition === 'corner' ? <DownOutlined /> : <RightOutlined />}
                   onClick={handleNextImage}
                   disabled={
                     files.filter(f => isImageFile(f.name))
@@ -1549,11 +1754,14 @@ export function MainContent() {
               </Tooltip>
             </Space>
 
-            <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
+            <div style={toolbarPosition === 'corner' 
+              ? { width: '100%', height: '1px', background: 'rgba(255,255,255,0.2)' }
+              : { width: '1px', height: '24px', background: 'rgba(255,255,255,0.2)' }} 
+            />
 
             {/* 缩放按钮 */}
-            <Space size="small">
-              <Tooltip title="放大">
+            <Space size="small" direction={toolbarPosition === 'corner' ? 'vertical' : 'horizontal'}>
+              <Tooltip title="放大" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
                 <Button
                   type="text"
                   icon={<ZoomInOutlined />}
@@ -1564,11 +1772,17 @@ export function MainContent() {
                 />
               </Tooltip>
               
-              <span style={{ color: '#fff', fontSize: '14px', minWidth: '50px', textAlign: 'center' }}>
+              <span style={{ 
+                color: '#fff', 
+                fontSize: '14px', 
+                minWidth: '50px', 
+                textAlign: 'center',
+                padding: toolbarPosition === 'corner' ? '4px 0' : '0'
+              }}>
                 {Math.round(imageScale * 100)}%
               </span>
               
-              <Tooltip title="缩小">
+              <Tooltip title="缩小" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
                 <Button
                   type="text"
                   icon={<ZoomOutOutlined />}
@@ -1579,7 +1793,7 @@ export function MainContent() {
                 />
               </Tooltip>
               
-              <Tooltip title="重置">
+              <Tooltip title="重置" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
                 <Button
                   type="text"
                   icon={<UndoOutlined />}
@@ -1591,10 +1805,13 @@ export function MainContent() {
               </Tooltip>
             </Space>
 
-            <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
+            <div style={toolbarPosition === 'corner' 
+              ? { width: '100%', height: '1px', background: 'rgba(255,255,255,0.2)' }
+              : { width: '1px', height: '24px', background: 'rgba(255,255,255,0.2)' }} 
+            />
 
             {/* 复制按钮 */}
-            <Tooltip title="复制文件">
+            <Tooltip title="复制文件" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
               <Button
                 type="text"
                 icon={<CopyOutlined />}
@@ -1604,10 +1821,13 @@ export function MainContent() {
               />
             </Tooltip>
 
-            <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }} />
+            <div style={toolbarPosition === 'corner' 
+              ? { width: '100%', height: '1px', background: 'rgba(255,255,255,0.2)' }
+              : { width: '1px', height: '24px', background: 'rgba(255,255,255,0.2)' }} 
+            />
 
             {/* 退出全屏 */}
-            <Tooltip title="退出全屏 (ESC)">
+            <Tooltip title="退出全屏 (ESC)" placement={toolbarPosition === 'corner' ? 'left' : 'top'}>
               <Button
                 type="text"
                 icon={<FullscreenExitOutlined />}
