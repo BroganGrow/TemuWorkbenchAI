@@ -62,9 +62,10 @@ export function FileTree({ onDrop }: FileTreeProps) {
   // 判断是否是工作流分类
   const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
 
-  // 快捷键：Ctrl+Alt+Shift+E - 在文件资源管理器中显示
+  // 快捷键支持
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Alt+Shift+E - 在文件资源管理器中显示
       if (e.ctrlKey && e.altKey && e.shiftKey && e.key === 'E') {
         e.preventDefault();
         if (selectedProduct) {
@@ -73,12 +74,32 @@ export function FileTree({ onDrop }: FileTreeProps) {
             window.electronAPI.showInFolder(product.path);
           }
         }
+        return;
+      }
+
+      // F2 或 Shift+F6 - 重命名产品
+      // 仅当选中了产品节点（非子文件夹）且没有打开编辑弹窗时生效
+      if ((e.key === 'F2' || (e.shiftKey && e.key === 'F6')) && !editDialogOpen) {
+        // 确保选中的是产品，而不是子文件夹
+        if (selectedProduct && !selectedFolder) {
+          e.preventDefault();
+          const product = products.find(p => p.id === selectedProduct);
+          if (product) {
+            const pathParts = product.path.split(/[/\\]/);
+            const folderName = pathParts[pathParts.length - 1];
+            setEditProductInfo({
+              path: product.path,
+              folderName
+            });
+            setEditDialogOpen(true);
+          }
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedProduct, products]);
+  }, [selectedProduct, selectedFolder, products, editDialogOpen]);
 
   // 加载普通文件夹（非工作流分类）
   useEffect(() => {
@@ -351,7 +372,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
         }} />
 
         {/* 展开全部 */}
-        <Tooltip title="展开全部 (Ctrl+Shift+E)" placement="bottom">
+        <Tooltip title="展开全部 (Ctrl+Shift+Z)" placement="bottom">
           <Button
             type="text"
             size="small"

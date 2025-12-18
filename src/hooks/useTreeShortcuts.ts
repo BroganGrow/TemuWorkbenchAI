@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 /**
  * 文件树快捷键
- * - Ctrl+Shift+E : 展开全部
+ * - Ctrl+Shift+Z : 展开全部
  * - Ctrl+Shift+C : 折叠全部
  * - Alt+F1 : 定位到当前文件
  */
@@ -13,8 +13,8 @@ export function useTreeShortcuts(callbacks: {
 }) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Shift+E - 展开全部
-      if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+      // Ctrl+Shift+Z - 展开全部
+      if (e.ctrlKey && e.shiftKey && e.key === 'Z') {
         e.preventDefault();
         callbacks.onExpandAll();
       }
