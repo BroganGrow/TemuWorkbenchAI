@@ -1,11 +1,11 @@
 {
-  "name": "super-tools",
+  "name": "temu-workbench",
   "version": "1.0.0",
-  "description": "SuperTools - Temu素材管理桌面应用",
+  "description": "Temu工作台 - Temu素材管理桌面应用",
   "main": "dist-electron/main.js",
   "type": "module",
   "author": {
-    "name": "SuperTools Team",
+    "name": "Temu工作台",
     "email": "support@supertools.com"
   },
   "homepage": "https://github.com/your-username/super-tools",

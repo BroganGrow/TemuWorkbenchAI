@@ -296,7 +296,7 @@ function App() {
               description={
                 <div>
                   <div style={{ fontSize: '16px', marginBottom: '8px' }}>
-                    欢迎使用 SuperTools
+                    欢迎使用 Temu工作台
                   </div>
                   <div style={{ color: '#8c8c8c', marginBottom: '16px' }}>
                     打开一个文件夹开始使用

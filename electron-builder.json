@@ -1,7 +1,7 @@
 {
-  "appId": "com.supertools.material.manager",
-  "productName": "SuperTools",
-  "copyright": "Copyright © 2024 SuperTools",
+  "appId": "com.temu.workbench",
+  "productName": "Temu工作台",
+  "copyright": "Copyright © 2024 Temu工作台",
   "directories": {
     "output": "release/${version}",
     "buildResources": "build"
@@ -24,7 +24,7 @@
     ],
     "artifactName": "${productName}-Setup-${version}.${ext}",
     "requestedExecutionLevel": "asInvoker",
-    "publisherName": "SuperTools",
+    "publisherName": "Temu工作台",
     "verifyUpdateCodeSignature": false
   },
   "nsis": {
@@ -33,7 +33,7 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "SuperTools",
+    "shortcutName": "Temu工作台",
     "deleteAppDataOnUninstall": false,
     "perMachine": false,
     "artifactName": "${productName}-Setup-${version}.${ext}"
