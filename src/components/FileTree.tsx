@@ -62,6 +62,24 @@ export function FileTree({ onDrop }: FileTreeProps) {
   // 判断是否是工作流分类
   const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
 
+  // 快捷键：Ctrl+Alt+Shift+E - 在文件资源管理器中显示
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.altKey && e.shiftKey && e.key === 'E') {
+        e.preventDefault();
+        if (selectedProduct) {
+          const product = products.find(p => p.id === selectedProduct);
+          if (product) {
+            window.electronAPI.showInFolder(product.path);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedProduct, products]);
+
   // 加载普通文件夹（非工作流分类）
   useEffect(() => {
     const loadNormalFolders = async () => {
@@ -259,6 +277,16 @@ export function FileTree({ onDrop }: FileTreeProps) {
               folderName
             });
             setEditDialogOpen(true);
+          }
+        }
+      },
+      {
+        key: 'show-in-folder',
+        icon: <FolderOpenOutlined />,
+        label: '打开文件位置',
+        onClick: () => {
+          if (product) {
+            window.electronAPI.showInFolder(product.path);
           }
         }
       },
