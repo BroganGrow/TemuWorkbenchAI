@@ -262,10 +262,10 @@ function App() {
       theme={{
         algorithm: actualTheme === 'dark' ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
         token: {
-          colorPrimary: '#fd7a45',
+          colorPrimary: actualTheme === 'eye-care' ? '#4caf50' : '#fd7a45',
           borderRadius: 6,
-          colorInfo: '#fd7a45',
-          colorLink: '#fd7a45',
+          colorInfo: actualTheme === 'eye-care' ? '#4caf50' : '#fd7a45',
+          colorLink: actualTheme === 'eye-care' ? '#4caf50' : '#fd7a45',
         },
       }}
     >
