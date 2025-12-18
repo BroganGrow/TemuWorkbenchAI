@@ -43,6 +43,71 @@ export interface HistoryItem {
   timestamp: number;
 }
 
+// 默认 AI 模型配置（提取为常量，便于数据迁移）
+const DEFAULT_AI_MODELS: AIModel[] = [
+  {
+    id: 'deepseek',
+    name: 'Deepseek',
+    enabled: true,
+    providers: [
+      { id: 'official', name: '官方', apiKey: '', selected: true },
+      { id: 'siliconflow', name: '硅基流动', apiKey: '', selected: false }
+    ]
+  },
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    enabled: true,
+    providers: [
+      { id: 'official', name: '官方', apiKey: '', selected: true }
+    ]
+  },
+  {
+    id: 'claude',
+    name: 'Claude',
+    enabled: true,
+    providers: [
+      { id: 'official', name: '官方', apiKey: '', selected: true }
+    ]
+  },
+  {
+    id: 'sora-image',
+    name: 'Sora Image',
+    enabled: true,
+    providers: [
+      { id: 'official', name: '官方', apiKey: '', selected: true },
+      { id: 'grsai', name: 'Grsai', apiKey: '', selected: false }
+    ]
+  },
+  {
+    id: 'nano-banana-pro',
+    name: 'Nano Banana Pro',
+    enabled: true,
+    providers: [
+      { id: 'official', name: '官方', apiKey: '', selected: true },
+      { id: 'grsai', name: 'Grsai', apiKey: '', selected: false }
+    ]
+  },
+  {
+    id: 'nano-banana-fast',
+    name: 'Nano Banana Fast',
+    enabled: true,
+    providers: [
+      { id: 'official', name: '官方', apiKey: '', selected: true },
+      { id: 'grsai', name: 'Grsai', apiKey: '', selected: false }
+    ]
+  },
+  {
+    id: 'nano-banana',
+    name: 'Nano Banana',
+    enabled: true,
+    providers: [
+      { id: 'official', name: '官方', apiKey: '', selected: true },
+      { id: 'grsai', name: 'Grsai', apiKey: '', selected: false }
+    ]
+  }
+];
+
 export interface AppState {
   // 当前选中的分类
   currentCategory: string;
@@ -128,33 +193,7 @@ export const useAppStore = create<AppState>()(
       refreshKey: 0,
       
       // 默认 AI 模型配置
-      aiModels: [
-        {
-          id: 'deepseek',
-          name: 'Deepseek',
-          enabled: true,
-          providers: [
-            { id: 'official', name: '官方', apiKey: '', selected: true },
-            { id: 'siliconflow', name: '硅基流动', apiKey: '', selected: false }
-          ]
-        },
-        {
-          id: 'openai',
-          name: 'OpenAI',
-          enabled: true,
-          providers: [
-            { id: 'official', name: '官方', apiKey: '', selected: true }
-          ]
-        },
-        {
-          id: 'claude',
-          name: 'Claude',
-          enabled: true,
-          providers: [
-            { id: 'official', name: '官方', apiKey: '', selected: true }
-          ]
-        }
-      ],
+      aiModels: DEFAULT_AI_MODELS,
 
       // Actions
       setCurrentCategory: (category) => set({ currentCategory: category, selectedProduct: null }),
@@ -351,7 +390,63 @@ export const useAppStore = create<AppState>()(
         aiModels: state.aiModels,
         aiTitlePrompt: state.aiTitlePrompt,
         productTypes: state.productTypes
-      })
+      }),
+      // 数据迁移：智能合并新旧数据
+      // 原则：用户填写的 API Key 永远不会丢失，新模型/Provider 会自动添加
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<AppState>;
+        const current = currentState as AppState;
+        
+        const persistedModels = persisted.aiModels || [];
+        const mergedAiModels: AIModel[] = [];
+        
+        // 1. 遍历所有默认模型，智能合并
+        DEFAULT_AI_MODELS.forEach(defaultModel => {
+          const existingModel = persistedModels.find(m => m.id === defaultModel.id);
+          
+          if (existingModel) {
+            // 模型已存在：保留用户的 enabled 状态，合并 providers
+            const mergedProviders = defaultModel.providers.map(defaultProvider => {
+              const existingProvider = existingModel.providers.find(p => p.id === defaultProvider.id);
+              if (existingProvider) {
+                // Provider 已存在：完全保留用户的配置（API Key、selected 状态）
+                return existingProvider;
+              }
+              // 新 Provider：使用默认值
+              return defaultProvider;
+            });
+            
+            // 保留用户可能添加的自定义 Provider
+            existingModel.providers.forEach(p => {
+              if (!mergedProviders.find(mp => mp.id === p.id)) {
+                mergedProviders.push(p);
+              }
+            });
+            
+            mergedAiModels.push({
+              ...defaultModel,
+              enabled: existingModel.enabled, // 保留用户的启用状态
+              providers: mergedProviders
+            });
+          } else {
+            // 新模型：直接添加默认配置
+            mergedAiModels.push(defaultModel);
+          }
+        });
+        
+        // 2. 保留用户自定义的模型（不在默认列表中的）
+        persistedModels.forEach(model => {
+          if (!mergedAiModels.find(m => m.id === model.id)) {
+            mergedAiModels.push(model);
+          }
+        });
+        
+        return {
+          ...current,
+          ...persisted,
+          aiModels: mergedAiModels
+        };
+      }
     }
   )
 );
