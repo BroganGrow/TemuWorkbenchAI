@@ -9,6 +9,7 @@ import { FileTree } from './components/FileTree';
 import { Toolbar } from './components/Toolbar';
 import { MainContent } from './components/MainContent';
 import { Dashboard } from './components/Dashboard';
+import { StatusBar } from './components/StatusBar';
 import { NewProductDialog } from './components/NewProductDialog';
 import { WorkspaceInitDialog } from './components/WorkspaceInitDialog';
 import { TitleBar } from './components/TitleBar';
@@ -360,6 +361,10 @@ function App() {
         )}
       </Layout>
 
+      {/* 底部状态栏 - 全局显示 */}
+      {rootPath && <StatusBar />}
+      </Layout>
+
       {/* 新建产品对话框 */}
       <NewProductDialog
         open={newProductDialogOpen}
@@ -392,7 +397,6 @@ function App() {
         open={aiPromptDialogOpen}
         onCancel={() => setAIPromptDialogOpen(false)}
       />
-      </Layout>
       </div>
     </ConfigProvider>
   );

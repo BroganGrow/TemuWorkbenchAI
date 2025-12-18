@@ -1,9 +1,7 @@
-import { Button, Input, Space, Segmented, Tooltip } from 'antd';
+import { Button, Input, Space, Tooltip } from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
-  UnorderedListOutlined,
-  AppstoreOutlined,
   SortAscendingOutlined,
   LeftOutlined,
   RightOutlined
@@ -17,8 +15,6 @@ interface ToolbarProps {
 
 export function Toolbar({ onNewProduct }: ToolbarProps) {
   const { 
-    viewMode, 
-    setViewMode, 
     searchKeyword, 
     setSearchKeyword,
     goBack,
@@ -105,22 +101,6 @@ export function Toolbar({ onNewProduct }: ToolbarProps) {
           maxWidth: '400px',
           flex: 1
         }}
-      />
-
-      {/* 右侧视图切换 */}
-      <Segmented
-        value={viewMode}
-        onChange={(value) => setViewMode(value as 'list' | 'grid')}
-        options={[
-          {
-            value: 'list',
-            icon: <UnorderedListOutlined />
-          },
-          {
-            value: 'grid',
-            icon: <AppstoreOutlined />
-          }
-        ]}
       />
     </div>
   );
