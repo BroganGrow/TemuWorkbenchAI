@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
-  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input 
+  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input, Dropdown, Popconfirm 
 } from 'antd';
 
 const { TextArea } = Input;
@@ -79,6 +79,8 @@ export function MainContent() {
   const [optimizingTitle, setOptimizingTitle] = useState(false);
   const [normalizing, setNormalizing] = useState(false);
   const [normalizeConfirmOpen, setNormalizeConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
   // 编辑产品弹窗状态
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editProductInfo, setEditProductInfo] = useState<{ path: string; folderName: string } | undefined>(undefined);
@@ -611,6 +613,52 @@ export function MainContent() {
     }
   };
 
+  // 删除文件
+  const handleDeleteFile = async (file: FileItem) => {
+    try {
+      if (window.electronAPI?.deleteFile) {
+        const result = await window.electronAPI.deleteFile(file.path);
+        if (result.success) {
+          message.success('文件已删除');
+          // 从列表中移除
+          setFiles(prev => prev.filter(f => f.path !== file.path));
+        } else {
+          message.error(result.error || '删除失败');
+        }
+      }
+    } catch (error) {
+      console.error('删除文件失败:', error);
+      message.error('删除文件失败');
+    }
+  };
+
+  // 文件右键菜单项
+  const getFileContextMenuItems = (file: FileItem) => [
+    {
+      key: 'copy',
+      icon: <CopyOutlined />,
+      label: '复制文件',
+      onClick: () => handleCopyFile(file.path)
+    },
+    {
+      key: 'show-in-folder',
+      icon: <FolderOpenOutlined />,
+      label: '打开文件位置',
+      onClick: () => handleOpenInFolder(file)
+    },
+    { type: 'divider' as const },
+    {
+      key: 'delete',
+      icon: <DeleteOutlined />,
+      label: '删除文件',
+      danger: true,
+      onClick: () => {
+        setFileToDelete(file);
+        setDeleteConfirmOpen(true);
+      }
+    }
+  ];
+
   const handleOpenGoodsInfo = async () => {
     if (!selectedProductData) return;
     
@@ -1028,53 +1076,42 @@ export function MainContent() {
               <List
                 dataSource={files}
                 renderItem={(file, index) => (
-                  <List.Item
-                    key={file.path}
-                    actions={[
-                      <Tooltip title="复制" key="copy">
-                        <Button 
-                          type="text" 
-                          icon={<CopyOutlined />}
-                          onClick={() => handleCopyFile(file.path)}
-                        />
-                      </Tooltip>,
-                      <Tooltip title="在文件夹中显示" key="folder">
-                        <Button 
-                          type="text" 
-                          icon={<FolderOpenOutlined />}
-                          onClick={() => handleOpenInFolder(file)}
-                        />
-                      </Tooltip>
-                    ]}
-                    style={{
-                      padding: '12px 0',
-                      borderBottom: '1px solid var(--border-color)',
-                      cursor: 'pointer'
-                    }}
-                    onDoubleClick={() => handlePreview(file, index)}
+                  <Dropdown
+                    menu={{ items: getFileContextMenuItems(file) }}
+                    trigger={['contextMenu']}
                   >
-                    <List.Item.Meta
-                      avatar={getFileIcon(file.name)}
-                      title={
-                        <div style={{ 
-                          color: 'var(--text-primary)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {file.name}
-                        </div>
-                      }
-                      description={
-                        <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
-                          <span>{formatFileSize(file.size)}</span>
-                          {file.modifyTime && (
-                            <span>{formatDate(file.modifyTime)}</span>
-                          )}
-                        </div>
-                      }
-                    />
-                  </List.Item>
+                    <List.Item
+                      key={file.path}
+                      style={{
+                        padding: '12px 0',
+                        borderBottom: '1px solid var(--border-color)',
+                        cursor: 'pointer'
+                      }}
+                      onDoubleClick={() => handlePreview(file, index)}
+                    >
+                      <List.Item.Meta
+                        avatar={getFileIcon(file.name)}
+                        title={
+                          <div style={{ 
+                            color: 'var(--text-primary)',
+                            wordBreak: 'break-all',
+                            whiteSpace: 'normal',
+                            lineHeight: '1.4'
+                          }}>
+                            {file.name}
+                          </div>
+                        }
+                        description={
+                          <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
+                            <span>{formatFileSize(file.size)}</span>
+                            {file.modifyTime && (
+                              <span>{formatDate(file.modifyTime)}</span>
+                            )}
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  </Dropdown>
                 )}
               />
             ) : (
@@ -1085,78 +1122,75 @@ export function MainContent() {
                 gap: '16px'
               }}>
                 {files.map((file, index) => (
-                  <Card
+                  <Dropdown
                     key={file.path}
-                    hoverable
-                    size="small"
-                    cover={
-                      isImageFile(file.name) ? (
-                        <div style={{
-                          height: '150px',
-                          background: 'var(--bg-tertiary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          overflow: 'hidden'
-                        }}>
-                          <img
-                            src={`file://${file.path}`}
-                            alt={file.name}
-                            style={{
-                              maxWidth: '100%',
-                              maxHeight: '100%',
-                              objectFit: 'contain'
-                            }}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <div style={{
-                          height: '150px',
-                          background: 'var(--bg-tertiary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          {getFileIcon(file.name)}
-                        </div>
-                      )
-                    }
-                    actions={[
-                      <Tooltip title="复制" key="copy">
-                        <CopyOutlined onClick={() => handleCopyFile(file.path)} />
-                      </Tooltip>,
-                      <Tooltip title="在文件夹中显示" key="folder">
-                        <FolderOpenOutlined onClick={() => handleOpenInFolder(file)} />
-                      </Tooltip>
-                    ]}
-                    style={{
-                      background: 'var(--card-bg)',
-                      borderColor: 'var(--border-color)',
-                      cursor: 'pointer'
-                    }}
-                    onDoubleClick={() => handlePreview(file, index)}
+                    menu={{ items: getFileContextMenuItems(file) }}
+                    trigger={['contextMenu']}
                   >
-                    <Card.Meta
-                      title={
-                        <div style={{
-                          fontSize: '12px',
-                          lineHeight: '1.4',
-                          wordBreak: 'break-all',
-                          whiteSpace: 'normal'
-                        }}>
-                          {file.name}
-                        </div>
+                    <Card
+                      hoverable
+                      size="small"
+                      cover={
+                        isImageFile(file.name) ? (
+                          <div style={{
+                            height: '150px',
+                            background: 'var(--bg-tertiary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden'
+                          }}>
+                            <img
+                              src={`file://${file.path}`}
+                              alt={file.name}
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                objectFit: 'contain'
+                              }}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div style={{
+                            height: '150px',
+                            background: 'var(--bg-tertiary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {getFileIcon(file.name)}
+                          </div>
+                        )
                       }
-                      description={
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                          {formatFileSize(file.size)}
-                        </div>
-                      }
-                    />
-                  </Card>
+                      style={{
+                        background: 'var(--card-bg)',
+                        borderColor: 'var(--border-color)',
+                        cursor: 'pointer'
+                      }}
+                      onDoubleClick={() => handlePreview(file, index)}
+                    >
+                      <Card.Meta
+                        title={
+                          <div style={{
+                            fontSize: '12px',
+                            lineHeight: '1.4',
+                            wordBreak: 'break-all',
+                            whiteSpace: 'normal'
+                          }}>
+                            {file.name}
+                          </div>
+                        }
+                        description={
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            {formatFileSize(file.size)}
+                          </div>
+                        }
+                      />
+                    </Card>
+                  </Dropdown>
                 ))}
               </div>
             )}
@@ -1613,6 +1647,30 @@ export function MainContent() {
             注意：此操作不可撤销，请确保已备份重要文件。
           </p>
         </div>
+      </Modal>
+
+      {/* 删除文件确认弹窗 */}
+      <Modal
+        title="确认删除"
+        open={deleteConfirmOpen}
+        onOk={() => {
+          if (fileToDelete) {
+            handleDeleteFile(fileToDelete);
+          }
+          setDeleteConfirmOpen(false);
+          setFileToDelete(null);
+        }}
+        onCancel={() => {
+          setDeleteConfirmOpen(false);
+          setFileToDelete(null);
+        }}
+        okText="删除"
+        okType="danger"
+        cancelText="取消"
+        centered
+      >
+        <p>确定要删除文件 "{fileToDelete?.name}" 吗？</p>
+        <p style={{ color: '#ff4d4f', fontSize: '12px' }}>此操作不可撤销。</p>
       </Modal>
     </div>
   );
