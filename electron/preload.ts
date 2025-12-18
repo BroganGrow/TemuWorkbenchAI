@@ -29,7 +29,7 @@ export interface ElectronAPI {
   checkFileExists: (filePath: string) => Promise<{ success: boolean; exists?: boolean; error?: string }>;
   
   // 文件操作API
-  importFiles: (files: string[], targetFolder: string) => Promise<ImportResult>;
+  importFiles: (files: string[], targetFolder: string, productId?: string) => Promise<ImportResult>;
   selectFolder: () => Promise<string | null>;
   listFiles: (folder: string) => Promise<FileInfo[]>;
   createDirectory: (dirPath: string) => Promise<{ success: boolean; error?: string }>;
@@ -57,7 +57,8 @@ const electronAPI: ElectronAPI = {
   checkFileExists: (filePath: string) => ipcRenderer.invoke('check-file-exists', filePath),
   
   // 文件操作API
-  importFiles: (files: string[], targetFolder: string) => ipcRenderer.invoke('import-files', files, targetFolder),
+  importFiles: (files: string[], targetFolder: string, productId?: string) => 
+    ipcRenderer.invoke('import-files', files, targetFolder, productId),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   listFiles: (folder: string) => ipcRenderer.invoke('list-files', folder),
   createDirectory: (dirPath: string) => ipcRenderer.invoke('create-directory', dirPath),

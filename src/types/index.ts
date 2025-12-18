@@ -54,7 +54,7 @@ declare global {
       checkFileExists: (filePath: string) => Promise<{ success: boolean; exists?: boolean; error?: string }>;
       
       // 文件操作API
-      importFiles: (files: string[], targetFolder: string) => Promise<ImportResult>;
+      importFiles: (files: string[], targetFolder: string, productId?: string) => Promise<ImportResult>;
       selectFolder: () => Promise<string | null>;
       listFiles: (folder: string) => Promise<FileInfo[]>;
       createDirectory: (dirPath: string) => Promise<{ success: boolean; error?: string }>;

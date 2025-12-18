@@ -296,9 +296,12 @@ export function MainContent() {
 
     setImporting(true);
     try {
-      // 调用导入API
+      // 调用导入API，传入产品ID用于生成标准化文件名
       if (window.electronAPI?.importFiles) {
-        const result = await window.electronAPI.importFiles(filePaths, targetFolder);
+        // 获取产品ID（如 AD006）
+        const productId = selectedProductData.id;
+        
+        const result = await window.electronAPI.importFiles(filePaths, targetFolder, productId);
         
         if (result.success.length > 0) {
           message.success(`成功导入 ${result.success.length} 个文件`);

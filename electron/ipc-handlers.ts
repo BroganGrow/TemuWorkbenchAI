@@ -24,7 +24,48 @@ interface FileInfo {
 }
 
 /**
- * 生成唯一的文件名（避免重名）
+ * 生成带产品标识的唯一文件名
+ * 格式: 产品类型号_日期-时分秒-毫秒_序号.扩展名
+ * 例如: AD006_20251218-204523-123_001.jpg
+ */
+function generateProductFileName(
+  targetDir: string,
+  originalName: string,
+  productId: string,
+  batchIndex: number
+): string {
+  const ext = path.extname(originalName);
+  const now = new Date();
+  
+  // 格式化时间：YYYYMMDD-HHmmss-SSS
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const millis = String(now.getMilliseconds()).padStart(3, '0');
+  
+  const timestamp = `${year}${month}${day}-${hours}${minutes}${seconds}-${millis}`;
+  const index = String(batchIndex).padStart(3, '0');
+  
+  let newName = `${productId}_${timestamp}_${index}${ext}`;
+  let newPath = path.join(targetDir, newName);
+  
+  // 极端情况下如果还是有重名（几乎不可能），添加随机后缀
+  let retryCount = 0;
+  while (fs.existsSync(newPath) && retryCount < 100) {
+    const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    newName = `${productId}_${timestamp}_${index}_${randomSuffix}${ext}`;
+    newPath = path.join(targetDir, newName);
+    retryCount++;
+  }
+  
+  return newName;
+}
+
+/**
+ * 生成唯一的文件名（避免重名）- 保留用于非产品场景
  * 格式: 序号_原文件名
  */
 function generateUniqueFileName(targetDir: string, originalName: string): string {
@@ -32,7 +73,7 @@ function generateUniqueFileName(targetDir: string, originalName: string): string
   let newName = originalName;
   let newPath = path.join(targetDir, newName);
 
-  // 检查文件是否存在，如果存在则添加序�?
+  // 检查文件是否存在，如果存在则添加序号
   while (fs.existsSync(newPath)) {
     const ext = path.extname(originalName);
     const nameWithoutExt = path.basename(originalName, ext);
@@ -50,19 +91,28 @@ function generateUniqueFileName(targetDir: string, originalName: string): string
 export function registerIpcHandlers() {
   /**
    * 导入文件到目标文件夹
+   * @param files 文件路径列表
+   * @param targetFolder 目标文件夹路径
+   * @param productId 可选，产品标识（如 "AD006"），用于生成带产品标识的文件名
    */
-  ipcMain.handle('import-files', async (_event, files: string[], targetFolder: string): Promise<ImportResult> => {
+  ipcMain.handle('import-files', async (
+    _event, 
+    files: string[], 
+    targetFolder: string,
+    productId?: string
+  ): Promise<ImportResult> => {
     const result: ImportResult = {
       success: [],
       failed: []
     };
 
     try {
-      // 确保目标文件夹存�?
+      // 确保目标文件夹存在
       await fs.ensureDir(targetFolder);
 
       // 逐个处理文件
-      for (const filePath of files) {
+      for (let i = 0; i < files.length; i++) {
+        const filePath = files[i];
         try {
           // 检查源文件是否存在
           if (!await fs.pathExists(filePath)) {
@@ -73,11 +123,17 @@ export function registerIpcHandlers() {
             continue;
           }
 
-          // 获取原始文件�?
+          // 获取原始文件名
           const originalName = path.basename(filePath);
           
-          // 生成唯一文件�?
-          const uniqueName = generateUniqueFileName(targetFolder, originalName);
+          // 生成文件名：如果有产品ID则使用产品命名规则，否则使用普通规则
+          let uniqueName: string;
+          if (productId) {
+            uniqueName = generateProductFileName(targetFolder, originalName, productId, i + 1);
+          } else {
+            uniqueName = generateUniqueFileName(targetFolder, originalName);
+          }
+          
           const targetPath = path.join(targetFolder, uniqueName);
 
           // 复制文件
