@@ -31,7 +31,8 @@ import {
   LoadingOutlined,
   FormatPainterOutlined,
   DragOutlined,
-  PushpinOutlined
+  PushpinOutlined,
+  ArrowsAltOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 import { generateCompletion } from '../utils/aiService';
@@ -654,7 +655,10 @@ export function MainContent() {
           setPreviewVisible(false);
         }
       } else if (e.key === 'f' || e.key === 'F') {
-        if (!isFullscreen) {
+        // F 键切换全屏模式
+        if (isFullscreen) {
+          handleExitFullscreen();
+        } else {
           handleFullscreen();
         }
       }
@@ -705,7 +709,7 @@ export function MainContent() {
       window.removeEventListener('wheel', handleWheel);
       if (wheelTimeout) clearTimeout(wheelTimeout);
     };
-  }, [previewVisible, previewType, currentPreviewIndex, files]);
+  }, [previewVisible, previewType, currentPreviewIndex, files, isFullscreen]);
 
   // 重置缩放和全屏当打开新预览时
   useEffect(() => {
@@ -1414,7 +1418,53 @@ export function MainContent() {
       {!isFullscreen ? (
         <Modal
           open={previewVisible}
-          title={previewTitle}
+          title={
+            <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center' }}>
+              {/* 文件名居中 - 使用绝对定位确保不受其他元素影响 */}
+              <span style={{ 
+                position: 'absolute',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                maxWidth: '400px', 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap',
+                textAlign: 'center'
+              }}>
+                {previewTitle}
+              </span>
+              {/* 分辨率、大小、全屏按钮放右侧 */}
+              <div style={{ 
+                marginLeft: 'auto',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                paddingRight: '32px'
+              }}>
+                {previewType === 'image' && previewResolution && (
+                  <Tag color="default" style={{ margin: 0, fontSize: '12px', lineHeight: '20px' }}>
+                    {previewResolution.width} × {previewResolution.height}
+                  </Tag>
+                )}
+                {previewType === 'image' && files[currentPreviewIndex] && (
+                  <Tag color="default" style={{ margin: 0, fontSize: '12px', lineHeight: '20px' }}>
+                    {formatFileSize(files[currentPreviewIndex].size)}
+                  </Tag>
+                )}
+                {previewType === 'image' && (
+                  <Tooltip title="全屏 (F)">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<ArrowsAltOutlined />}
+                      onClick={handleFullscreen}
+                      style={{ color: '#fff', height: '22px', width: '22px', padding: 0 }}
+                    />
+                  </Tooltip>
+                )}
+              </div>
+            </div>
+          }
           footer={null}
           onCancel={() => setPreviewVisible(false)}
           width={previewType === 'image' ? '90%' : '70%'}
@@ -1450,6 +1500,10 @@ export function MainContent() {
                 <img
                   src={previewContent}
                   alt={previewTitle}
+                  onLoad={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    setPreviewResolution({ width: img.naturalWidth, height: img.naturalHeight });
+                  }}
                   style={{
                     maxWidth: imageScale === 1 ? '100%' : 'none',
                     maxHeight: imageScale === 1 ? '100%' : 'none',
@@ -1695,6 +1749,10 @@ export function MainContent() {
             <img
               src={previewContent}
               alt={previewTitle}
+              onLoad={(e) => {
+                const img = e.target as HTMLImageElement;
+                setPreviewResolution({ width: img.naturalWidth, height: img.naturalHeight });
+              }}
               style={{
                 maxWidth: imageScale === 1 ? '100%' : 'none',
                 maxHeight: imageScale === 1 ? '100%' : 'none',
