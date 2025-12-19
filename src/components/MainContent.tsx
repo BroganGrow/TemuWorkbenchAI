@@ -63,7 +63,9 @@ export function MainContent() {
     products,
     viewMode,
     currentCategory,
-    aiTitlePrompt
+    aiTitlePrompt,
+    activeTabId,
+    updateTabFolder
   } = useAppStore();
 
   const { aiModels } = useAppStore();
@@ -1152,12 +1154,19 @@ export function MainContent() {
         height: '100%',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        background: 'var(--bg-primary)'
       }}>
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="请从左侧选择一个产品"
-          style={{ color: 'var(--text-secondary)' }}
+          description={
+            <div style={{ color: 'var(--text-secondary)' }}>
+              <div style={{ marginBottom: '8px' }}>没有打开的产品</div>
+              <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                双击左侧产品或按 Enter 键打开标签页
+              </div>
+            </div>
+          }
         />
       </div>
     );
@@ -1609,7 +1618,13 @@ export function MainContent() {
                   transition: 'all 0.3s'
                 }}
                 styles={{ body: { padding: '16px' } }}
-                onClick={() => useAppStore.getState().setSelectedFolder(folder.key)}
+                onClick={() => {
+                  useAppStore.getState().setSelectedFolder(folder.key);
+                  // 更新标签页的 folderId
+                  if (activeTabId) {
+                    updateTabFolder(activeTabId, folder.key);
+                  }
+                }}
                 onDragEnter={(e) => handleDragEnter(e, folder.key)}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}

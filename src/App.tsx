@@ -10,6 +10,7 @@ import { Toolbar } from './components/Toolbar';
 import { MainContent } from './components/MainContent';
 import { Dashboard } from './components/Dashboard';
 import { StatusBar } from './components/StatusBar';
+import { TabBar } from './components/TabBar';
 import { NewProductDialog } from './components/NewProductDialog';
 import { WorkspaceInitDialog } from './components/WorkspaceInitDialog';
 import { TitleBar } from './components/TitleBar';
@@ -21,6 +22,7 @@ import { useAppStore } from './store/appStore';
 import { isStandardWorkspace, initWorkspace } from './utils/workspaceInit';
 import { loadAllProducts } from './utils/productLoader';
 import { useNavigationShortcuts } from './hooks/useNavigationShortcuts';
+import { useTabShortcuts } from './hooks/useTabShortcuts';
 
 const { Sider, Content } = Layout;
 
@@ -49,6 +51,9 @@ function App() {
   
   // 启用导航快捷键（Alt + ←/→ 和鼠标侧键）
   useNavigationShortcuts();
+  
+  // 启用标签页快捷键（Ctrl+W, Ctrl+Tab 等）
+  useTabShortcuts();
 
   // 获取实际使用的主题
   const actualTheme = useMemo(() => {
@@ -356,6 +361,7 @@ function App() {
                   <Toolbar
                     onNewProduct={() => setNewProductDialogOpen(true)}
                   />
+                  <TabBar />
                   <Content style={{
                     overflow: 'hidden',
                     flex: 1

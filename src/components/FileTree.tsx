@@ -49,7 +49,8 @@ export function FileTree({ onDrop }: FileTreeProps) {
     selectedFolder,
     setSelectedProduct,
     setSelectedFolder,
-    removeProduct
+    removeProduct,
+    openTab
   } = useAppStore();
 
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
@@ -249,6 +250,36 @@ export function FileTree({ onDrop }: FileTreeProps) {
       setSelectedFolder(null);
     }
   };
+
+  // 双击打开标签页
+  const handleDoubleClick = (e: React.MouseEvent, node: DataNode) => {
+    if (!isWorkflowCategory) return;
+    
+    const key = node.key as string;
+    
+    // 只有产品节点才能打开标签页（子文件夹不能）
+    if (!key.includes('-')) {
+      const product = products.find(p => p.id === key);
+      if (product) {
+        openTab(product.path, `${product.id} - ${product.name}`);
+      }
+    }
+  };
+
+  // Enter 键打开标签页
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && selectedProduct && !selectedFolder && isWorkflowCategory) {
+        const product = products.find(p => p.id === selectedProduct);
+        if (product) {
+          openTab(product.path, `${product.id} - ${product.name}`);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedProduct, selectedFolder, products, isWorkflowCategory, openTab]);
 
   const handleExpand: TreeProps['onExpand'] = (expandedKeysValue) => {
     setExpandedKeys(expandedKeysValue as string[]);
@@ -484,7 +515,21 @@ export function FileTree({ onDrop }: FileTreeProps) {
           selectedKeys={selectedProduct ? [
             selectedFolder ? `${selectedProduct}-${selectedFolder}` : selectedProduct
           ] : []}
-          onSelect={handleSelect}
+          onSelect={(selectedKeys, info) => {
+            const key = selectedKeys[0] as string;
+            
+            // 单击展开/收起产品节点
+            if (isWorkflowCategory && key && !key.includes('-')) {
+              if (expandedKeys.includes(key)) {
+                setExpandedKeys(expandedKeys.filter(k => k !== key));
+              } else {
+                setExpandedKeys([...expandedKeys, key]);
+              }
+            }
+            
+            // 调用原来的选择处理
+            handleSelect(selectedKeys, info);
+          }}
           onExpand={handleExpand}
           treeData={treeData}
           draggable
@@ -508,14 +553,20 @@ export function FileTree({ onDrop }: FileTreeProps) {
               menu={{ items: contextMenuItems(node.key as string) }}
               trigger={['contextMenu']}
             >
-              <span style={{ 
-                userSelect: 'none',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                display: 'inline-block',
-                maxWidth: '100%'
-              }}>
+              <span 
+                style={{ 
+                  userSelect: 'none',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-block',
+                  maxWidth: '100%'
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  handleDoubleClick(e, node);
+                }}
+              >
                 {node.title as React.ReactNode}
               </span>
             </Dropdown>

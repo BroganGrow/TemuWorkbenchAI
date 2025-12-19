@@ -43,6 +43,14 @@ export interface HistoryItem {
   timestamp: number;
 }
 
+// 标签页项
+export interface TabItem {
+  id: string; // 使用 product path 作为唯一标识
+  productPath: string;
+  productName: string;
+  folderId: string | null; // 当前选中的子文件夹
+}
+
 // 默认 AI 模型配置（提取为常量，便于数据迁移）
 const DEFAULT_AI_MODELS: AIModel[] = [
   {
@@ -135,6 +143,10 @@ export interface AppState {
   // 刷新计数器（用于触发强制重新加载）
   refreshKey: number;
   
+  // 标签页管理
+  tabs: TabItem[];
+  activeTabId: string | null;
+  
   // AI 模型配置
   aiModels: AIModel[];
 
@@ -173,6 +185,14 @@ export interface AppState {
   goForward: () => void;
   canGoBack: () => boolean;
   canGoForward: () => boolean;
+
+  // 标签页管理
+  openTab: (productPath: string, productName: string) => void;
+  closeTab: (tabId: string) => void;
+  setActiveTab: (tabId: string) => void;
+  updateTabFolder: (tabId: string, folderId: string | null) => void;
+  closeAllTabs: () => void;
+  closeOtherTabs: (tabId: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -191,6 +211,8 @@ export const useAppStore = create<AppState>()(
       history: [],
       historyIndex: -1,
       refreshKey: 0,
+      tabs: [],
+      activeTabId: null,
       
       // 默认 AI 模型配置
       aiModels: DEFAULT_AI_MODELS,
@@ -378,6 +400,117 @@ export const useAppStore = create<AppState>()(
       canGoForward: () => {
         const state = get();
         return state.historyIndex < state.history.length - 1;
+      },
+
+      // 标签页管理
+      openTab: (productPath, productName) => {
+        const state = get();
+        const tabId = productPath;
+        
+        // 检查标签页是否已存在
+        const existingTab = state.tabs.find(t => t.id === tabId);
+        
+        if (existingTab) {
+          // 标签页已存在，只需切换到该标签页
+          set({ 
+            activeTabId: tabId,
+            selectedProduct: productPath,
+            selectedFolder: existingTab.folderId
+          });
+        } else {
+          // 创建新标签页
+          const newTab: TabItem = {
+            id: tabId,
+            productPath,
+            productName,
+            folderId: null
+          };
+          
+          set({ 
+            tabs: [...state.tabs, newTab],
+            activeTabId: tabId,
+            selectedProduct: productPath,
+            selectedFolder: null
+          });
+        }
+      },
+
+      closeTab: (tabId) => {
+        const state = get();
+        const tabIndex = state.tabs.findIndex(t => t.id === tabId);
+        
+        if (tabIndex === -1) return;
+        
+        const newTabs = state.tabs.filter(t => t.id !== tabId);
+        
+        // 如果关闭的是当前活动标签页，需要切换到其他标签页
+        if (state.activeTabId === tabId) {
+          if (newTabs.length > 0) {
+            // 优先切换到右侧标签页，如果没有则切换到左侧
+            const newActiveTab = newTabs[tabIndex] || newTabs[tabIndex - 1];
+            set({
+              tabs: newTabs,
+              activeTabId: newActiveTab.id,
+              selectedProduct: newActiveTab.productPath,
+              selectedFolder: newActiveTab.folderId
+            });
+          } else {
+            // 没有标签页了
+            set({
+              tabs: [],
+              activeTabId: null,
+              selectedProduct: null,
+              selectedFolder: null
+            });
+          }
+        } else {
+          set({ tabs: newTabs });
+        }
+      },
+
+      setActiveTab: (tabId) => {
+        const state = get();
+        const tab = state.tabs.find(t => t.id === tabId);
+        
+        if (tab) {
+          set({
+            activeTabId: tabId,
+            selectedProduct: tab.productPath,
+            selectedFolder: tab.folderId
+          });
+        }
+      },
+
+      updateTabFolder: (tabId, folderId) => {
+        set((state) => ({
+          tabs: state.tabs.map(t => 
+            t.id === tabId ? { ...t, folderId } : t
+          ),
+          selectedFolder: state.activeTabId === tabId ? folderId : state.selectedFolder
+        }));
+      },
+
+      closeAllTabs: () => {
+        set({
+          tabs: [],
+          activeTabId: null,
+          selectedProduct: null,
+          selectedFolder: null
+        });
+      },
+
+      closeOtherTabs: (tabId) => {
+        const state = get();
+        const tab = state.tabs.find(t => t.id === tabId);
+        
+        if (tab) {
+          set({
+            tabs: [tab],
+            activeTabId: tabId,
+            selectedProduct: tab.productPath,
+            selectedFolder: tab.folderId
+          });
+        }
       }
     }),
     {
@@ -389,7 +522,9 @@ export const useAppStore = create<AppState>()(
         viewMode: state.viewMode,
         aiModels: state.aiModels,
         aiTitlePrompt: state.aiTitlePrompt,
-        productTypes: state.productTypes
+        productTypes: state.productTypes,
+        tabs: state.tabs,
+        activeTabId: state.activeTabId
       }),
       // 数据迁移：智能合并新旧数据
       // 原则：用户填写的 API Key 永远不会丢失，新模型/Provider 会自动添加

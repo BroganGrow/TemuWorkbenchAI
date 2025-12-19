@@ -386,3 +386,90 @@ code {
 .ant-layout-sider-children {
   background: var(--bg-secondary) !important;
 }
+
+/* 标签页样式 */
+.tab-bar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scroll-behavior: smooth;
+}
+
+.tab-bar::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tab-bar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab-bar::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 2px;
+}
+
+.tab-bar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* 标签页项样式 */
+.tab-item {
+  position: relative;
+}
+
+.tab-item::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background: var(--border-color);
+  opacity: 0.5;
+}
+
+.tab-item:last-child::after {
+  display: none;
+}
+
+/* 标签页项悬停效果 */
+.tab-item:hover {
+  background: var(--bg-hover) !important;
+}
+
+.tab-item:hover::after {
+  opacity: 0;
+}
+
+/* 活动标签页样式 */
+.tab-item[data-active="true"] {
+  background: var(--bg-primary) !important;
+}
+
+.tab-item[data-active="true"]::after {
+  opacity: 0;
+}
+
+/* 标签页关闭按钮 - 始终显示 */
+.tab-close-button {
+  opacity: 1;
+}
+
+.tab-close-button:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme='dark'] .tab-close-button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme='eye-care'] .tab-close-button:hover {
+  background: rgba(76, 175, 80, 0.15) !important;
+}
+
+[data-theme='reading'] .tab-close-button:hover {
+  background: rgba(139, 115, 85, 0.15) !important;
+}
+
+[data-theme='paper'] .tab-close-button:hover {
+  background: rgba(141, 110, 99, 0.15) !important;
+}
