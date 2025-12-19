@@ -748,6 +748,10 @@ export function MainContent() {
         
         const result = await electronAPI.getClipboardFiles() as { success: boolean; files?: string[]; error?: string };
         
+        console.log('[Paste] Clipboard read result:', result);
+        console.log('[Paste] Files count:', result.files?.length || 0);
+        console.log('[Paste] Files:', result.files);
+        
         if (!result.success || !result.files || result.files.length === 0) {
           if (result.error && result.error !== '剪贴板中没有文件') {
             message.warning('剪贴板中没有文件');
@@ -778,7 +782,10 @@ export function MainContent() {
         // 导入文件
         setImporting(true);
         const productId = selectedProductData.id;
+        console.log('[Paste] Importing files:', result.files.length, 'files to', targetFolder, 'with productId:', productId);
         const importResult = await window.electronAPI.importFiles(result.files, targetFolder, productId);
+        
+        console.log('[Paste] Import result:', importResult);
         
         if (importResult.success.length > 0) {
           message.success(`成功粘贴 ${importResult.success.length} 个文件`);
