@@ -7,7 +7,6 @@ const { TextArea } = Input;
 import {
   FileImageOutlined,
   FolderOpenOutlined,
-  CalendarOutlined,
   DeleteOutlined,
   EditOutlined,
   FileTextOutlined,
@@ -1232,29 +1231,6 @@ export function MainContent() {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FolderOpenOutlined style={{ color: 'var(--text-secondary)' }} />
-            <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>路径：</span>
-            <Tooltip title={selectedProductData.path}>
-              <span style={{ 
-                fontSize: '12px',
-                maxWidth: '500px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {selectedProductData.path}
-              </span>
-            </Tooltip>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CalendarOutlined style={{ color: 'var(--text-secondary)' }} />
-            <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>创建时间：</span>
-            <span style={{ fontSize: '12px' }}>
-              {formatDate(selectedProductData.createdAt)}
-            </span>
-          </div>
-          
           {/* GoodsInfo.md 编辑 */}
           <div style={{ 
             marginTop: '12px',
