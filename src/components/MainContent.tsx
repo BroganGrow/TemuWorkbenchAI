@@ -35,6 +35,7 @@ import {
   ArrowsAltOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { generateCompletion } from '../utils/aiService';
 import { NewProductDialog } from './NewProductDialog';
 
@@ -67,6 +68,7 @@ export function MainContent() {
   } = useAppStore();
 
   const { aiModels } = useAppStore();
+  const { settings } = useSettingsStore();
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -882,8 +884,14 @@ export function MainContent() {
       label: '删除文件',
       danger: true,
       onClick: () => {
-        setFileToDelete(file);
-        setDeleteConfirmOpen(true);
+        // 根据设置决定是否显示确认对话框
+        if (settings.basic.showDeleteConfirmation) {
+          setFileToDelete(file);
+          setDeleteConfirmOpen(true);
+        } else {
+          // 直接删除
+          handleDeleteFile(file);
+        }
       }
     }
   ];

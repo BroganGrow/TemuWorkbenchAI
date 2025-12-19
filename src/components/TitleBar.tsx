@@ -8,7 +8,8 @@ import {
   AppstoreOutlined,
   BgColorsOutlined,
   CheckOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  SettingOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 import { Button, Tooltip } from 'antd';
@@ -21,6 +22,7 @@ interface TitleBarProps {
   onRefresh: () => void;
   onOpenAIConfig: () => void;
   onOpenAIPrompt: () => void;
+  onOpenSettings: () => void;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({ 
@@ -30,7 +32,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onCloseFolder,
   onRefresh,
   onOpenAIConfig,
-  onOpenAIPrompt
+  onOpenAIPrompt,
+  onOpenSettings
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const { theme, setTheme } = useAppStore();
@@ -214,6 +217,18 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                     </div>
                   ),
                   onClick: () => setTheme('paper')
+                }
+              ]
+            },
+            { 
+              key: 'settings', 
+              label: '设置',
+              children: [
+                {
+                  key: 'basic-settings',
+                  label: '基本',
+                  icon: <SettingOutlined />,
+                  onClick: onOpenSettings
                 }
               ]
             },
