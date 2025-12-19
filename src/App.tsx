@@ -11,6 +11,7 @@ import { MainContent } from './components/MainContent';
 import { Dashboard } from './components/Dashboard';
 import { StatusBar } from './components/StatusBar';
 import { TabBar } from './components/TabBar';
+import { SplitView } from './components/SplitView';
 import { NewProductDialog } from './components/NewProductDialog';
 import { WorkspaceInitDialog } from './components/WorkspaceInitDialog';
 import { TitleBar } from './components/TitleBar';
@@ -39,7 +40,9 @@ function App() {
     setTheme, 
     currentCategory,
     refreshKey,
-    triggerRefresh 
+    triggerRefresh,
+    splitLayout,
+    splitPanels
   } = useAppStore();
   const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
   const [workspaceInitDialogOpen, setWorkspaceInitDialogOpen] = useState(false);
@@ -361,13 +364,27 @@ function App() {
                   <Toolbar
                     onNewProduct={() => setNewProductDialogOpen(true)}
                   />
-                  <TabBar />
-                  <Content style={{
-                    overflow: 'hidden',
-                    flex: 1
-                  }} key={`main-content-${refreshKey}`}>
-                    <MainContent />
-                  </Content>
+                  {/* 如果有拆分布局，显示拆分视图；否则显示默认的单面板 */}
+                  {splitLayout && splitPanels.length > 0 ? (
+                    <Content style={{
+                      overflow: 'hidden',
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }} key={`split-view-${refreshKey}`}>
+                      <SplitView />
+                    </Content>
+                  ) : (
+                    <>
+                      <TabBar />
+                      <Content style={{
+                        overflow: 'hidden',
+                        flex: 1
+                      }} key={`main-content-${refreshKey}`}>
+                        <MainContent />
+                      </Content>
+                    </>
+                  )}
                 </>
               )}
             </Layout>

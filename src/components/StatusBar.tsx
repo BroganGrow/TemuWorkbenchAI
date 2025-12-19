@@ -10,7 +10,8 @@ export function StatusBar() {
     viewMode, 
     setViewMode,
     products,
-    selectedProduct
+    selectedProduct,
+    selectedFileCount
   } = useAppStore();
 
   // 计算状态信息
@@ -51,6 +52,12 @@ export function StatusBar() {
         )}
         {!selectedProductName && productCount > 0 && (
           <span style={{ lineHeight: '28px' }}>{productCount} 个产品</span>
+        )}
+        {selectedFileCount > 0 && (
+          <>
+            <Divider type="vertical" style={{ margin: '0 8px', borderColor: 'var(--border-color)', height: '20px', top: '4px' }} />
+            <span style={{ lineHeight: '28px', color: 'var(--primary-color)' }}>已选中 {selectedFileCount} 个文件</span>
+          </>
         )}
       </Space>
 

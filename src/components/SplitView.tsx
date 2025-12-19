@@ -1,12 +1,12 @@
-import { useState, useRef } from 'react';
-import { useAppStore } from '../store/appStore';
+import { useState } from 'react';
+import { useAppStore, SplitNode, TabItem } from '../store/appStore';
+import { MainContent } from './MainContent';
 import { CloseOutlined } from '@ant-design/icons';
 import { Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { TabItem } from '../store/appStore';
 
 // 限制拖拽在标签栏容器内，且只能水平移动
 const restrictToTabBar: Modifier = ({
@@ -40,16 +40,94 @@ const restrictToTabBar: Modifier = ({
   };
 };
 
-export function TabBar() {
-  const { tabs, activeTabId, setActiveTab, closeTab, closeAllTabs, closeOtherTabs, reorderTabs, splitTab } = useAppStore();
+// 拆分面板容器组件
+export function SplitView() {
+  const { splitLayout, splitPanels } = useAppStore();
+
+  // 如果没有拆分布局，返回 null（使用默认的单面板模式）
+  if (!splitLayout || splitPanels.length === 0) {
+    return null;
+  }
+
+  return (
+    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <SplitNodeRenderer node={splitLayout} />
+    </div>
+  );
+}
+
+// 递归渲染拆分节点
+interface SplitNodeRendererProps {
+  node: SplitNode;
+}
+
+function SplitNodeRenderer({ node }: SplitNodeRendererProps) {
+  if (node.type === 'panel' && node.panelId) {
+    return <PanelView panelId={node.panelId} />;
+  }
+
+  if (node.type === 'split' && node.children && node.sizes) {
+    const isHorizontal = node.direction === 'horizontal';
+    const [size1, size2] = node.sizes;
+
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: isHorizontal ? 'row' : 'column',
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden'
+        }}
+      >
+        <div
+          style={{
+            [isHorizontal ? 'width' : 'height']: `${size1}%`,
+            display: 'flex',
+            overflow: 'hidden',
+            borderRight: isHorizontal ? '1px solid var(--border-color)' : 'none',
+            borderBottom: !isHorizontal ? '1px solid var(--border-color)' : 'none'
+          }}
+        >
+          <SplitNodeRenderer node={node.children[0]} />
+        </div>
+        <div
+          style={{
+            [isHorizontal ? 'width' : 'height']: `${size2}%`,
+            display: 'flex',
+            overflow: 'hidden'
+          }}
+        >
+          <SplitNodeRenderer node={node.children[1]} />
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// 单个面板视图
+interface PanelViewProps {
+  panelId: string;
+}
+
+function PanelView({ panelId }: PanelViewProps) {
+  const { splitPanels, activePanelId, setActivePanelId, closeTabInPanel, setActiveTabInPanel } = useAppStore();
+  const panel = splitPanels.find(p => p.id === panelId);
   const [isDragging, setIsDragging] = useState(false);
-  const tabBarRef = useRef<HTMLDivElement>(null);
+
+  if (!panel) {
+    return <div>Panel not found</div>;
+  }
+
+  const isActivePanel = activePanelId === panelId;
 
   // 配置拖拽传感器
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // 移动8px后才开始拖拽，避免与点击冲突
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -72,53 +150,41 @@ export function TabBar() {
       return;
     }
 
-    const oldIndex = tabs.findIndex(tab => tab.id === active.id);
-    const newIndex = tabs.findIndex(tab => tab.id === over.id);
+    const oldIndex = panel.tabs.findIndex(tab => tab.id === active.id);
+    const newIndex = panel.tabs.findIndex(tab => tab.id === over.id);
 
     if (oldIndex !== -1 && newIndex !== -1) {
-      reorderTabs(oldIndex, newIndex);
+      // 重新排序面板内的标签页
+      const newTabs = arrayMove(panel.tabs, oldIndex, newIndex);
+      // 更新 store 中的面板
+      useAppStore.getState().splitPanels.forEach((p, idx) => {
+        if (p.id === panelId) {
+          useAppStore.setState((state) => ({
+            splitPanels: state.splitPanels.map((panel) =>
+              panel.id === panelId ? { ...panel, tabs: newTabs } : panel
+            )
+          }));
+        }
+      });
     }
   };
 
-  if (tabs.length === 0) {
-    return null;
-  }
-
+  // 右键菜单
   const handleContextMenu = (tabId: string): MenuProps => ({
     items: [
       {
         key: 'close',
         label: '关闭',
-        onClick: () => closeTab(tabId)
+        onClick: () => closeTabInPanel(panelId, tabId)
       },
       {
         key: 'close-others',
         label: '关闭其他标签页',
-        disabled: tabs.length === 1,
-        onClick: () => closeOtherTabs(tabId)
-      },
-      {
-        type: 'divider'
-      },
-      {
-        key: 'split-up',
-        label: '向上拆分',
-        onClick: () => splitTab(tabId, 'up')
-      },
-      {
-        key: 'split-down',
-        label: '向下拆分',
-        onClick: () => splitTab(tabId, 'down')
-      },
-      {
-        key: 'split-left',
-        label: '向左拆分',
-        onClick: () => splitTab(tabId, 'left')
-      },
-      {
-        key: 'split-right',
-        label: '向右拆分',
-        onClick: () => splitTab(tabId, 'right')
+        disabled: panel.tabs.length === 1,
+        onClick: () => {
+          const otherTabs = panel.tabs.filter(t => t.id !== tabId);
+          otherTabs.forEach(t => closeTabInPanel(panelId, t.id));
+        }
       },
       {
         type: 'divider'
@@ -126,62 +192,86 @@ export function TabBar() {
       {
         key: 'close-right',
         label: '关闭右侧标签页',
-        disabled: tabs.findIndex(t => t.id === tabId) === tabs.length - 1,
+        disabled: panel.tabs.findIndex(t => t.id === tabId) === panel.tabs.length - 1,
         onClick: () => {
-          const currentIndex = tabs.findIndex(t => t.id === tabId);
-          const tabsToClose = tabs.slice(currentIndex + 1);
-          tabsToClose.forEach(t => closeTab(t.id));
+          const currentIndex = panel.tabs.findIndex(t => t.id === tabId);
+          const tabsToClose = panel.tabs.slice(currentIndex + 1);
+          tabsToClose.forEach(t => closeTabInPanel(panelId, t.id));
         }
       },
       {
         key: 'close-all',
         label: '关闭所有标签页',
-        onClick: () => closeAllTabs()
+        onClick: () => {
+          panel.tabs.forEach(t => closeTabInPanel(panelId, t.id));
+        }
       }
     ]
   });
 
   return (
     <div
-      ref={tabBarRef}
       style={{
-        height: '36px',
+        flex: 1,
         display: 'flex',
-        alignItems: 'stretch',
-        background: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border-color)',
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        flexShrink: 0,
-        userSelect: 'none',
-        position: 'relative'
+        flexDirection: 'column',
+        overflow: 'hidden',
+        background: 'var(--bg-primary)',
+        border: isActivePanel ? '2px solid var(--primary-color)' : '2px solid transparent',
+        transition: 'border-color 0.2s'
       }}
-      className="tab-bar"
+      onClick={() => {
+        if (!isActivePanel) {
+          setActivePanelId(panelId);
+        }
+      }}
     >
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        modifiers={[restrictToTabBar]}
+      {/* 面板标签栏 */}
+      <div
+        style={{
+          height: '36px',
+          display: 'flex',
+          alignItems: 'stretch',
+          background: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-color)',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          flexShrink: 0,
+          userSelect: 'none'
+        }}
+        className="tab-bar"
       >
-        <SortableContext
-          items={tabs.map(t => t.id)}
-          strategy={horizontalListSortingStrategy}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToTabBar]}
         >
-          {tabs.map((tab) => (
-            <SortableTabItem
-              key={tab.id}
-              tab={tab}
-              isActive={tab.id === activeTabId}
-              isDragging={isDragging}
-              onSelect={() => setActiveTab(tab.id)}
-              onClose={() => closeTab(tab.id)}
-              onContextMenu={handleContextMenu(tab.id)}
-            />
-          ))}
-        </SortableContext>
-      </DndContext>
+          <SortableContext
+            items={panel.tabs.map(t => t.id)}
+            strategy={horizontalListSortingStrategy}
+          >
+            {panel.tabs.map((tab) => (
+              <SortableTabItem
+                key={tab.id}
+                tab={tab}
+                panelId={panelId}
+                isActive={tab.id === panel.activeTabId}
+                isDragging={isDragging}
+                onSelect={() => setActiveTabInPanel(panelId, tab.id)}
+                onClose={() => closeTabInPanel(panelId, tab.id)}
+                onContextMenu={handleContextMenu(tab.id)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+      </div>
+
+      {/* 面板内容 */}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        <MainContent panelId={panelId} />
+      </div>
     </div>
   );
 }
@@ -189,6 +279,7 @@ export function TabBar() {
 // 可排序的标签项组件
 interface SortableTabItemProps {
   tab: TabItem;
+  panelId: string;
   isActive: boolean;
   isDragging: boolean;
   onSelect: () => void;
@@ -196,7 +287,7 @@ interface SortableTabItemProps {
   onContextMenu: MenuProps;
 }
 
-function SortableTabItem({ tab, isActive, isDragging: globalDragging, onSelect, onClose, onContextMenu }: SortableTabItemProps) {
+function SortableTabItem({ tab, panelId, isActive, isDragging: globalDragging, onSelect, onClose, onContextMenu }: SortableTabItemProps) {
   const {
     attributes,
     listeners,
@@ -220,7 +311,9 @@ function SortableTabItem({ tab, isActive, isDragging: globalDragging, onSelect, 
     minWidth: '100px',
     maxWidth: '180px',
     flexShrink: 0,
-    zIndex: isDragging ? 1000 : 1
+    zIndex: isDragging ? 1000 : 1,
+    background: isActive ? 'var(--bg-active)' : 'transparent',
+    borderRight: '1px solid var(--border-color)'
   };
 
   return (
@@ -261,7 +354,7 @@ function SortableTabItem({ tab, isActive, isDragging: globalDragging, onSelect, 
             color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
             fontWeight: isActive ? 500 : 400,
             transition: 'color 0.15s ease',
-            pointerEvents: 'none' // 防止文字选择干扰拖拽
+            pointerEvents: 'none'
           }}
           title={tab.productName}
         >

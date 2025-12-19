@@ -56,17 +56,44 @@ const WORKFLOW_CATEGORIES = [
   '05_Archive'
 ];
 
-export function MainContent() {
+interface MainContentProps {
+  panelId?: string; // 如果提供，则显示该面板的内容；否则显示主面板
+}
+
+export function MainContent({ panelId }: MainContentProps = {}) {
+  const store = useAppStore();
   const { 
-    selectedProduct, 
-    selectedFolder,
     products,
     viewMode,
     currentCategory,
     aiTitlePrompt,
     activeTabId,
-    updateTabFolder
-  } = useAppStore();
+    updateTabFolder,
+    splitPanels,
+    activePanelId,
+    updateTabFolderInPanel
+  } = store;
+
+  // 根据 panelId 获取对应的 selectedProduct 和 selectedFolder
+  let selectedProduct: string | null;
+  let selectedFolder: string | null;
+  
+  if (panelId) {
+    // 在拆分面板中
+    const panel = splitPanels.find(p => p.id === panelId);
+    if (panel && panel.activeTabId) {
+      const activeTab = panel.tabs.find(t => t.id === panel.activeTabId);
+      selectedProduct = activeTab?.productId || null;
+      selectedFolder = activeTab?.folderId || null;
+    } else {
+      selectedProduct = null;
+      selectedFolder = null;
+    }
+  } else {
+    // 在主面板中
+    selectedProduct = store.selectedProduct;
+    selectedFolder = store.selectedFolder;
+  }
 
   const { aiModels } = useAppStore();
   const { settings, updateBasicSettings } = useSettingsStore();
@@ -94,6 +121,20 @@ export function MainContent() {
   const [filesToDelete, setFilesToDelete] = useState<FileItem[]>([]);
   const [selectedFileIndices, setSelectedFileIndices] = useState<number[]>([]);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number>(-1);
+  
+  // 同步选中的文件数量到全局状态（用于状态栏显示）
+  useEffect(() => {
+    // 只有当前是活动面板或主面板时才更新
+    if (panelId) {
+      const currentActivePanelId = useAppStore.getState().activePanelId;
+      if (currentActivePanelId === panelId) {
+        useAppStore.getState().setSelectedFileCount(selectedFileIndices.length);
+      }
+    } else {
+      // 主面板
+      useAppStore.getState().setSelectedFileCount(selectedFileIndices.length);
+    }
+  }, [selectedFileIndices, panelId]);
   // 编辑产品弹窗状态
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editProductInfo, setEditProductInfo] = useState<{ path: string; folderName: string } | undefined>(undefined);
@@ -833,6 +874,14 @@ export function MainContent() {
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
+
+      // 如果在拆分面板中，只处理当前活动面板的快捷键
+      if (panelId) {
+        const currentActivePanelId = useAppStore.getState().activePanelId;
+        if (currentActivePanelId !== panelId) {
+          return; // 不是当前活动面板，不处理快捷键
+        }
+      }
       
       // Ctrl+A 全选
       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
@@ -840,7 +889,7 @@ export function MainContent() {
         if (files.length > 0) {
           setSelectedFileIndices(files.map((_, index) => index));
           setLastSelectedIndex(files.length - 1);
-          message.success(`已选中 ${files.length} 个文件`);
+          // 不显示 toast 提示，让状态栏显示选中数量
         }
         return;
       }
@@ -1622,7 +1671,14 @@ export function MainContent() {
                 onClick={() => {
                   useAppStore.getState().setSelectedFolder(folder.key);
                   // 更新标签页的 folderId
-                  if (activeTabId) {
+                  if (panelId && activePanelId === panelId) {
+                    // 在拆分面板中
+                    const panel = splitPanels.find(p => p.id === panelId);
+                    if (panel && panel.activeTabId) {
+                      updateTabFolderInPanel(panelId, panel.activeTabId, folder.key);
+                    }
+                  } else if (activeTabId) {
+                    // 在主面板中
                     updateTabFolder(activeTabId, folder.key);
                   }
                 }}

@@ -52,6 +52,28 @@ export interface TabItem {
   folderId: string | null; // 当前选中的子文件夹
 }
 
+// 拆分面板项
+export interface SplitPanel {
+  id: string; // 面板唯一标识
+  tabs: TabItem[]; // 面板内的标签页
+  activeTabId: string | null; // 面板内的活动标签页
+}
+
+// 拆分布局类型
+export type SplitDirection = 'horizontal' | 'vertical';
+
+// 拆分布局节点
+export interface SplitNode {
+  id: string;
+  type: 'panel' | 'split';
+  // 如果是 panel 类型
+  panelId?: string;
+  // 如果是 split 类型
+  direction?: SplitDirection;
+  children?: [SplitNode, SplitNode];
+  sizes?: [number, number]; // 百分比，总和为 100
+}
+
 // 默认 AI 模型配置（提取为常量，便于数据迁移）
 const DEFAULT_AI_MODELS: AIModel[] = [
   {
@@ -148,6 +170,14 @@ export interface AppState {
   tabs: TabItem[];
   activeTabId: string | null;
   
+  // 拆分面板管理
+  splitPanels: SplitPanel[];
+  splitLayout: SplitNode | null; // 拆分布局树
+  activePanelId: string | null; // 当前活动的面板
+  
+  // 文件选择状态（用于状态栏显示）
+  selectedFileCount: number;
+  
   // AI 模型配置
   aiModels: AIModel[];
 
@@ -195,6 +225,18 @@ export interface AppState {
   closeAllTabs: () => void;
   closeOtherTabs: (tabId: string) => void;
   reorderTabs: (oldIndex: number, newIndex: number) => void;
+  
+  // 拆分面板管理
+  splitTab: (tabId: string, direction: 'up' | 'down' | 'left' | 'right') => void;
+  closeSplitPanel: (panelId: string) => void;
+  setActivePanelId: (panelId: string) => void;
+  openTabInPanel: (panelId: string, productPath: string, productId: string, productName: string) => void;
+  closeTabInPanel: (panelId: string, tabId: string) => void;
+  setActiveTabInPanel: (panelId: string, tabId: string) => void;
+  updateTabFolderInPanel: (panelId: string, tabId: string, folderId: string | null) => void;
+  
+  // 文件选择管理
+  setSelectedFileCount: (count: number) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -215,6 +257,10 @@ export const useAppStore = create<AppState>()(
       refreshKey: 0,
       tabs: [],
       activeTabId: null,
+      splitPanels: [],
+      splitLayout: null,
+      activePanelId: null,
+      selectedFileCount: 0,
       
       // 默认 AI 模型配置
       aiModels: DEFAULT_AI_MODELS,
@@ -536,7 +582,274 @@ export const useAppStore = create<AppState>()(
         const [movedTab] = newTabs.splice(oldIndex, 1);
         newTabs.splice(newIndex, 0, movedTab);
         set({ tabs: newTabs });
-      }
+      },
+
+      // 拆分标签页
+      splitTab: (tabId, direction) => {
+        const state = get();
+        const tab = state.tabs.find(t => t.id === tabId);
+        
+        if (!tab) return;
+
+        // 生成新面板ID
+        const newPanelId = `panel_${Date.now()}`;
+        
+        // 创建新面板，包含复制的标签页
+        const newPanel: SplitPanel = {
+          id: newPanelId,
+          tabs: [{
+            ...tab,
+            id: `${tab.id}_${Date.now()}` // 新的唯一ID
+          }],
+          activeTabId: `${tab.id}_${Date.now()}`
+        };
+
+        // 如果当前没有拆分布局，创建初始拆分
+        if (!state.splitLayout) {
+          // 创建主面板
+          const mainPanelId = 'main_panel';
+          const mainPanel: SplitPanel = {
+            id: mainPanelId,
+            tabs: state.tabs,
+            activeTabId: state.activeTabId
+          };
+
+          // 根据方向创建拆分布局
+          const isHorizontal = direction === 'left' || direction === 'right';
+          const newPanelFirst = direction === 'up' || direction === 'left';
+
+          const splitNode: SplitNode = {
+            id: `split_${Date.now()}`,
+            type: 'split',
+            direction: isHorizontal ? 'horizontal' : 'vertical',
+            sizes: [50, 50],
+            children: newPanelFirst
+              ? [
+                  { id: newPanelId, type: 'panel', panelId: newPanelId },
+                  { id: mainPanelId, type: 'panel', panelId: mainPanelId }
+                ]
+              : [
+                  { id: mainPanelId, type: 'panel', panelId: mainPanelId },
+                  { id: newPanelId, type: 'panel', panelId: newPanelId }
+                ]
+          };
+
+          set({
+            splitPanels: [mainPanel, newPanel],
+            splitLayout: splitNode,
+            activePanelId: newPanelId,
+            tabs: [], // 清空主标签页，全部由面板管理
+            activeTabId: null
+          });
+        } else {
+          // TODO: 处理已有拆分布局的情况（在已有面板中再次拆分）
+          // 暂时简化：只添加新面板到列表
+          set({
+            splitPanels: [...state.splitPanels, newPanel],
+            activePanelId: newPanelId
+          });
+        }
+      },
+
+      // 关闭拆分面板
+      closeSplitPanel: (panelId) => {
+        const state = get();
+        const remainingPanels = state.splitPanels.filter(p => p.id !== panelId);
+
+        // 如果只剩一个面板，恢复到非拆分模式
+        if (remainingPanels.length === 1) {
+          const lastPanel = remainingPanels[0];
+          set({
+            splitPanels: [],
+            splitLayout: null,
+            activePanelId: null,
+            tabs: lastPanel.tabs,
+            activeTabId: lastPanel.activeTabId,
+            selectedProduct: lastPanel.activeTabId 
+              ? lastPanel.tabs.find(t => t.id === lastPanel.activeTabId)?.productId || null
+              : null,
+            selectedFolder: lastPanel.activeTabId
+              ? lastPanel.tabs.find(t => t.id === lastPanel.activeTabId)?.folderId || null
+              : null
+          });
+        } else if (remainingPanels.length === 0) {
+          // 所有面板都关闭了
+          set({
+            splitPanels: [],
+            splitLayout: null,
+            activePanelId: null,
+            tabs: [],
+            activeTabId: null,
+            selectedProduct: null,
+            selectedFolder: null
+          });
+        } else {
+          // 还有多个面板，只更新面板列表
+          // TODO: 更新 splitLayout 树结构
+          set({
+            splitPanels: remainingPanels,
+            activePanelId: state.activePanelId === panelId 
+              ? remainingPanels[0].id 
+              : state.activePanelId
+          });
+        }
+      },
+
+      // 设置活动面板
+      setActivePanelId: (panelId) => {
+        const state = get();
+        const panel = state.splitPanels.find(p => p.id === panelId);
+        
+        if (panel && panel.activeTabId) {
+          const activeTab = panel.tabs.find(t => t.id === panel.activeTabId);
+          set({
+            activePanelId: panelId,
+            selectedProduct: activeTab?.productId || null,
+            selectedFolder: activeTab?.folderId || null,
+            selectedFileCount: 0 // 切换面板时清空选中计数
+          });
+        } else {
+          set({ 
+            activePanelId: panelId,
+            selectedFileCount: 0 // 切换面板时清空选中计数
+          });
+        }
+      },
+
+      // 在指定面板中打开标签页
+      openTabInPanel: (panelId, productPath, productId, productName) => {
+        const state = get();
+        const panel = state.splitPanels.find(p => p.id === panelId);
+        
+        if (!panel) return;
+
+        const tabId = productPath;
+        const existingTab = panel.tabs.find(t => t.id === tabId);
+
+        if (existingTab) {
+          // 标签页已存在，激活它
+          set({
+            splitPanels: state.splitPanels.map(p =>
+              p.id === panelId ? { ...p, activeTabId: tabId } : p
+            ),
+            activePanelId: panelId,
+            selectedProduct: productId,
+            selectedFolder: existingTab.folderId
+          });
+        } else {
+          // 创建新标签页
+          const newTab: TabItem = {
+            id: tabId,
+            productPath,
+            productId,
+            productName,
+            folderId: null
+          };
+
+          set({
+            splitPanels: state.splitPanels.map(p =>
+              p.id === panelId 
+                ? { ...p, tabs: [...p.tabs, newTab], activeTabId: tabId }
+                : p
+            ),
+            activePanelId: panelId,
+            selectedProduct: productId,
+            selectedFolder: null
+          });
+        }
+      },
+
+      // 关闭面板中的标签页
+      closeTabInPanel: (panelId, tabId) => {
+        const state = get();
+        const panel = state.splitPanels.find(p => p.id === panelId);
+        
+        if (!panel) return;
+
+        const newTabs = panel.tabs.filter(t => t.id !== tabId);
+
+        // 如果面板中没有标签页了，关闭整个面板
+        if (newTabs.length === 0) {
+          get().closeSplitPanel(panelId);
+          return;
+        }
+
+        // 更新面板的标签页列表
+        let newActiveTabId = panel.activeTabId;
+        if (panel.activeTabId === tabId) {
+          // 关闭的是活动标签页，切换到其他标签页
+          const tabIndex = panel.tabs.findIndex(t => t.id === tabId);
+          const newActiveTab = newTabs[tabIndex] || newTabs[tabIndex - 1];
+          newActiveTabId = newActiveTab.id;
+        }
+
+        set({
+          splitPanels: state.splitPanels.map(p =>
+            p.id === panelId 
+              ? { ...p, tabs: newTabs, activeTabId: newActiveTabId }
+              : p
+          )
+        });
+
+        // 如果是当前活动面板，更新选中状态
+        if (state.activePanelId === panelId && newActiveTabId) {
+          const activeTab = newTabs.find(t => t.id === newActiveTabId);
+          if (activeTab) {
+            set({
+              selectedProduct: activeTab.productId,
+              selectedFolder: activeTab.folderId
+            });
+          }
+        }
+      },
+
+      // 设置面板中的活动标签页
+      setActiveTabInPanel: (panelId, tabId) => {
+        const state = get();
+        const panel = state.splitPanels.find(p => p.id === panelId);
+        
+        if (!panel) return;
+
+        const tab = panel.tabs.find(t => t.id === tabId);
+        
+        if (tab) {
+          set({
+            splitPanels: state.splitPanels.map(p =>
+              p.id === panelId ? { ...p, activeTabId: tabId } : p
+            ),
+            activePanelId: panelId,
+            selectedProduct: tab.productId,
+            selectedFolder: tab.folderId
+          });
+        }
+      },
+
+      // 更新面板中标签页的文件夹
+      updateTabFolderInPanel: (panelId, tabId, folderId) => {
+        const state = get();
+        
+        set({
+          splitPanels: state.splitPanels.map(p =>
+            p.id === panelId
+              ? {
+                  ...p,
+                  tabs: p.tabs.map(t =>
+                    t.id === tabId ? { ...t, folderId } : t
+                  )
+                }
+              : p
+          )
+        });
+
+        // 如果是当前活动面板和标签页，更新选中状态
+        const panel = state.splitPanels.find(p => p.id === panelId);
+        if (state.activePanelId === panelId && panel?.activeTabId === tabId) {
+          set({ selectedFolder: folderId });
+        }
+      },
+
+      // 设置选中的文件数量
+      setSelectedFileCount: (count) => set({ selectedFileCount: count })
     }),
     {
       name: 'super-tools-storage',
