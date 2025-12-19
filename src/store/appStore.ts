@@ -116,7 +116,7 @@ export interface AppState {
   // 选中的子文件夹
   selectedFolder: string | null;
   // 主题设置
-  theme: 'light' | 'dark' | 'system' | 'eye-care' | 'reading';
+  theme: 'light' | 'dark' | 'system' | 'eye-care' | 'reading' | 'paper';
   // 根目录路径
   rootPath: string;
   // 产品列表
@@ -142,7 +142,7 @@ export interface AppState {
   setCurrentCategory: (category: string) => void;
   setSelectedProduct: (product: string | null, recordHistory?: boolean) => void;
   setSelectedFolder: (folder: string | null, recordHistory?: boolean) => void;
-  setTheme: (theme: 'light' | 'dark' | 'system' | 'eye-care' | 'reading') => void;
+  setTheme: (theme: 'light' | 'dark' | 'system' | 'eye-care' | 'reading' | 'paper') => void;
   setRootPath: (path: string) => void;
   setProducts: (products: ProductNode[]) => void;
   addProduct: (product: ProductNode) => void;

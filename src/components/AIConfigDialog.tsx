@@ -50,12 +50,16 @@ function SortableItem({ model, onUpdateProvider }: SortableItemProps) {
 
   const { token } = theme.useToken();
 
+  // 检测当前主题
+  const currentTheme = document.body.getAttribute('data-theme') || '';
+  const isPaperTheme = currentTheme === 'paper';
+  
   return (
     <div ref={setNodeRef} style={style}>
       <div style={{ 
-        border: `1px solid ${token.colorBorder}`, 
+        border: `1px solid ${isPaperTheme ? 'var(--border-color)' : token.colorBorder}`, 
         borderRadius: token.borderRadiusLG,
-        background: token.colorBgContainer,
+        background: isPaperTheme ? 'var(--card-bg)' : token.colorBgContainer,
         overflow: 'hidden'
       }}>
         <Collapse
@@ -103,8 +107,12 @@ function SortableItem({ model, onUpdateProvider }: SortableItemProps) {
                       gap: '12px',
                       padding: '8px',
                       borderRadius: token.borderRadius,
-                      border: `1px solid ${provider.selected ? token.colorPrimary : token.colorBorderSecondary}`,
-                      background: provider.selected ? token.colorPrimaryBg : 'transparent'
+                      border: `1px solid ${provider.selected 
+                        ? (isPaperTheme ? 'var(--primary-color)' : token.colorPrimary) 
+                        : (isPaperTheme ? 'var(--border-color)' : token.colorBorderSecondary)}`,
+                      background: provider.selected 
+                        ? (isPaperTheme ? 'var(--bg-active)' : token.colorPrimaryBg) 
+                        : 'transparent'
                     }}>
                       <Radio value={provider.id}>
                         {provider.name}

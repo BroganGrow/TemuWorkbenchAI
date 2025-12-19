@@ -71,6 +71,11 @@ function App() {
     }
   }, [theme]);
 
+  // 同步主题到 body，确保 Modal 等 Portal 组件也能获取主题样式
+  useEffect(() => {
+    document.body.setAttribute('data-theme', actualTheme);
+  }, [actualTheme]);
+
   // 主题切换快捷键 Ctrl+Alt+G（深色 ⇄ 浅色）
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -260,16 +265,16 @@ function App() {
     <ConfigProvider
       locale={zhCN}
       theme={{
-        algorithm: actualTheme === 'dark' ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
-        token: {
-          colorPrimary: actualTheme === 'eye-care' ? '#4caf50' : actualTheme === 'reading' ? '#8b7355' : '#fd7a45',
-          borderRadius: 6,
-          colorInfo: actualTheme === 'eye-care' ? '#4caf50' : actualTheme === 'reading' ? '#8b7355' : '#fd7a45',
-          colorLink: actualTheme === 'eye-care' ? '#4caf50' : actualTheme === 'reading' ? '#8b7355' : '#fd7a45',
-        },
-      }}
+          algorithm: actualTheme === 'dark' ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+          token: {
+            colorPrimary: actualTheme === 'eye-care' ? '#4caf50' : actualTheme === 'reading' ? '#8b7355' : actualTheme === 'paper' ? '#8d6e63' : '#fd7a45',
+            borderRadius: 6,
+            colorInfo: actualTheme === 'eye-care' ? '#4caf50' : actualTheme === 'reading' ? '#8b7355' : actualTheme === 'paper' ? '#8d6e63' : '#fd7a45',
+            colorLink: actualTheme === 'eye-care' ? '#4caf50' : actualTheme === 'reading' ? '#8b7355' : actualTheme === 'paper' ? '#8d6e63' : '#fd7a45',
+          },
+        }}
     >
-      <div data-theme={actualTheme}>
+      <div>
       <Layout style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {/* 自定义标题栏 */}
         <TitleBar 

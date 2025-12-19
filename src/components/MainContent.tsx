@@ -1418,6 +1418,7 @@ export function MainContent() {
       {!isFullscreen ? (
         <Modal
           open={previewVisible}
+          className={previewType === 'image' ? 'image-preview-modal' : ''}
           title={
             <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center' }}>
               {/* 文件名居中 - 使用绝对定位确保不受其他元素影响 */}

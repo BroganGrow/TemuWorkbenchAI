@@ -76,6 +76,185 @@
   --image-preview-bg: #faf8f3;
 }
 
+[data-theme='paper'] {
+  /* 羊皮纸主题 - 暖黄色调，模拟旧书页，强力护眼，去白化 */
+  --bg-primary: #e6dcc5;
+  --bg-secondary: #f0e6d0;
+  --bg-tertiary: #d9ccb3;
+  --bg-hover: rgba(141, 110, 99, 0.08);
+  --bg-active: rgba(141, 110, 99, 0.12);
+  --text-primary: #5d4037;
+  --text-secondary: #8d6e63;
+  --border-color: #d7ccc8;
+  --border-color-split: #d7ccc8;
+  --primary-color: #8d6e63;
+  --scrollbar-thumb: rgba(141, 110, 99, 0.3);
+  --scrollbar-track: #e6dcc5;
+  --card-bg: #f0e6d0;
+  --image-preview-bg: #e6dcc5;
+}
+
+/* 羊皮纸主题 - 组件去白化覆盖 */
+[data-theme='paper'] .ant-input,
+[data-theme='paper'] .ant-input-affix-wrapper,
+[data-theme='paper'] .ant-select-selector,
+[data-theme='paper'] .ant-dropdown-menu,
+[data-theme='paper'] .ant-menu-submenu-popup .ant-menu,
+[data-theme='paper'] .ant-menu-popup .ant-menu,
+[data-theme='paper'] .ant-modal-content,
+[data-theme='paper'] .ant-modal-header,
+[data-theme='paper'] .ant-popover-inner,
+[data-theme='paper'] .ant-message-notice-content,
+[data-theme='paper'] .ant-drawer-content,
+[data-theme='paper'] .ant-picker,
+[data-theme='paper'] .ant-picker-panel-container,
+[data-theme='paper'] .ant-btn:not(.ant-btn-primary):not(.ant-btn-text):not(.ant-btn-link),
+[data-theme='paper'] .ant-segmented,
+[data-theme='paper'] .ant-segmented-item-selected,
+[data-theme='paper'] .ant-tag,
+[data-theme='paper'] .ant-collapse-content,
+[data-theme='paper'] .ant-collapse-header,
+[data-theme='paper'] .ant-tree,
+[data-theme='paper'] .ant-tree .ant-tree-node-content-wrapper,
+[data-theme='paper'] .ant-card,
+[data-theme='paper'] .ant-list-header,
+[data-theme='paper'] .ant-list-footer,
+[data-theme='paper'] .ant-image-preview-root .ant-image-preview-content,
+[data-theme='paper'] .ant-card-head,
+[data-theme='paper'] .ant-layout-header {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme='paper'] .ant-card {
+  border-color: var(--border-color) !important;
+}
+
+/* 修复 Collapse 内容区域背景 */
+[data-theme='paper'] .ant-collapse-content-box {
+  background-color: var(--card-bg) !important;
+}
+
+/* 修复 Radio Group 和 Radio Wrapper 背景 */
+[data-theme='paper'] .ant-radio-group,
+[data-theme='paper'] .ant-radio-wrapper {
+  background-color: transparent !important;
+}
+
+/* 修复 AIConfigDialog 中的内联样式背景 */
+[data-theme='paper'] .ant-collapse-ghost .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+  background-color: var(--card-bg) !important;
+}
+
+/* 修复选中项的背景色（覆盖内联样式） */
+[data-theme='paper'] .ant-radio-wrapper {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='paper'] .ant-radio-wrapper:hover {
+  color: var(--primary-color) !important;
+}
+
+/* 修复 Input.Password 在 Radio 组内的背景 */
+[data-theme='paper'] .ant-input-password,
+[data-theme='paper'] .ant-input-password .ant-input {
+  background-color: transparent !important;
+}
+
+[data-theme='paper'] .ant-collapse-header {
+  background-color: var(--bg-hover) !important; /* 头部稍微深一点区分 */
+}
+
+[data-theme='paper'] .ant-modal-body {
+  background-color: transparent !important; /* 让 body 透出 content 的背景 */
+}
+
+/* 修复 ResizableSider 可能的白色背景 */
+[data-theme='paper'] .ant-layout-sider {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* 修复预览弹窗的背景 */
+[data-theme='paper'] .ant-modal .ant-modal-content {
+  background-color: var(--card-bg) !important;
+}
+
+[data-theme='paper'] .image-preview-modal .ant-modal-content {
+  background-color: var(--image-preview-bg) !important;
+}
+
+[data-theme='paper'] .ant-modal-header {
+  background-color: var(--card-bg) !important;
+  border-bottom-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme='paper'] .ant-modal-title {
+  background-color: transparent !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme='paper'] .image-preview-modal .ant-modal-header {
+  background-color: transparent !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme='paper'] .ant-modal-close {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='paper'] .ant-modal-close:hover {
+  background-color: var(--bg-hover) !important;
+}
+
+/* 专门针对 Tree 组件的背景覆盖 */
+[data-theme='paper'] .ant-tree,
+[data-theme='paper'] .ant-tree .ant-tree-node-content-wrapper {
+  background-color: transparent !important;
+}
+
+[data-theme='paper'] .ant-tree .ant-tree-node-selected .ant-tree-node-content-wrapper {
+  background-color: var(--bg-active) !important;
+}
+
+[data-theme='paper'] .ant-tag {
+  border-color: var(--border-color);
+  background: var(--bg-hover);
+}
+
+[data-theme='paper'] .ant-segmented {
+  background-color: var(--bg-tertiary) !important;
+}
+
+[data-theme='paper'] .ant-segmented-item-selected {
+  background-color: var(--card-bg) !important;
+  color: var(--primary-color) !important;
+}
+
+[data-theme='paper'] .ant-modal-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme='paper'] .ant-table-wrapper {
+  background: var(--card-bg);
+}
+
+[data-theme='paper'] .ant-table-thead > tr > th,
+[data-theme='paper'] .ant-table-tbody > tr > td,
+[data-theme='paper'] .ant-table {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme='paper'] .ant-table-tbody > tr.ant-table-row:hover > td,
+[data-theme='paper'] .ant-dropdown-menu-item-selected,
+[data-theme='paper'] .ant-menu-submenu-popup .ant-menu-item-selected,
+[data-theme='paper'] .ant-menu-popup .ant-menu-item-selected {
+  background-color: var(--bg-hover) !important;
+  color: var(--primary-color) !important;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -155,6 +334,13 @@ code {
   background: rgba(139, 115, 85, 0.1) !important;
   color: #8b7355 !important;
   border-right: 3px solid #8b7355;
+}
+
+/* 羊皮纸模式下的菜单样式 */
+[data-theme='paper'] .ant-layout-sider-light .ant-menu-item-selected {
+  background: rgba(141, 110, 99, 0.1) !important;
+  color: #8d6e63 !important;
+  border-right: 3px solid #8d6e63;
 }
 
 /* 优化菜单项内边距 */

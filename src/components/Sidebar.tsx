@@ -37,7 +37,7 @@ export function Sidebar() {
 
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
-  const isDark = theme !== 'eye-care' && theme !== 'reading' && (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches));
+  const isDark = theme !== 'eye-care' && theme !== 'reading' && theme !== 'paper' && (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches));
 
   const handleMoveProduct = async (productId: string, targetCategory: string) => {
     // 1. 获取产品信息
