@@ -194,6 +194,16 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                     </div>
                   ),
                   onClick: () => setTheme('eye-care')
+                },
+                {
+                  key: 'theme-reading',
+                  label: (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: '120px' }}>
+                      <span>阅读</span>
+                      {theme === 'reading' && <CheckOutlined style={{ color: '#fd7a45' }} />}
+                    </div>
+                  ),
+                  onClick: () => setTheme('reading')
                 }
               ]
             },
