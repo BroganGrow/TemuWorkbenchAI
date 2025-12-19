@@ -219,7 +219,17 @@ export const useAppStore = create<AppState>()(
       aiModels: DEFAULT_AI_MODELS,
 
       // Actions
-      setCurrentCategory: (category) => set({ currentCategory: category, selectedProduct: null }),
+      setCurrentCategory: (category) => {
+        const state = get();
+        // 如果有活动标签页，保持标签页内容不变；否则清空选择
+        if (state.activeTabId) {
+          // 有活动标签页，只切换分类，不清空选择
+          set({ currentCategory: category });
+        } else {
+          // 没有活动标签页，切换分类并清空选择
+          set({ currentCategory: category, selectedProduct: null, selectedFolder: null });
+        }
+      },
       
       triggerRefresh: () => set((state) => ({ refreshKey: state.refreshKey + 1 })),
 

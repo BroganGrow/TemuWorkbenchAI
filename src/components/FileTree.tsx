@@ -53,7 +53,8 @@ export function FileTree({ onDrop }: FileTreeProps) {
     openTab,
     activeTabId,
     updateTabFolder,
-    tabs
+    tabs,
+    setCurrentCategory
   } = useAppStore();
 
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
@@ -192,30 +193,95 @@ export function FileTree({ onDrop }: FileTreeProps) {
     setAutoExpandEnabled(false); // 手动操作后禁用自动展开
   };
 
-  // 定位到当前选中的产品
+  // 定位到当前选中的产品（支持跨工作流）
   const handleLocateCurrent = useCallback(() => {
-    if (!selectedProduct) {
+    // 优先使用活动标签页的产品，如果没有标签页则使用 selectedProduct
+    let targetProductId: string | null = null;
+    
+    if (activeTabId && tabs.length > 0) {
+      // 从活动标签页获取产品ID
+      const activeTab = tabs.find(t => t.id === activeTabId);
+      if (activeTab) {
+        targetProductId = activeTab.productId;
+      }
+    } else if (selectedProduct) {
+      // 如果没有活动标签页，使用当前选中的产品
+      targetProductId = selectedProduct;
+    }
+
+    if (!targetProductId) {
       return;
     }
 
-    // 展开并滚动到选中的产品
-    if (!expandedKeys.includes(selectedProduct)) {
-      setExpandedKeys(prev => [...prev, selectedProduct]);
+    // 查找产品信息
+    const product = products.find(p => p.id === targetProductId);
+    if (!product) {
+      return;
     }
 
-    // 使用 setTimeout 确保 DOM 更新后再滚动
-    setTimeout(() => {
-      const selectedNode = document.querySelector('.ant-tree-treenode-selected');
-      if (selectedNode) {
-        selectedNode.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
-        });
+    // 检查是否需要切换工作流分类
+    const needSwitchCategory = product.category !== currentCategory;
+    
+    // 定位到产品的函数
+    const locateProduct = (productId: string) => {
+      // 展开产品节点
+      if (!expandedKeys.includes(productId)) {
+        setExpandedKeys(prev => [...prev, productId]);
       }
-    }, 100);
+
+      // 使用 setTimeout 确保 DOM 更新后再滚动
+      setTimeout(() => {
+        // Ant Design Tree 的节点选择器
+        // 查找所有树节点，然后找到包含目标产品ID的节点
+        const treeNodes = document.querySelectorAll('.ant-tree-treenode');
+        let targetNode: HTMLElement | null = null;
+        
+        for (let i = 0; i < treeNodes.length; i++) {
+          const node = treeNodes[i] as HTMLElement;
+          const titleElement = node.querySelector('.ant-tree-title');
+          if (titleElement && titleElement.textContent?.includes(productId)) {
+            targetNode = node;
+            break;
+          }
+        }
+
+        if (targetNode) {
+          targetNode.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+          // 临时高亮显示（移除其他选中状态）
+          for (let i = 0; i < treeNodes.length; i++) {
+            (treeNodes[i] as HTMLElement).classList.remove('ant-tree-treenode-selected');
+          }
+          targetNode.classList.add('ant-tree-treenode-selected');
+          
+          // 2秒后移除高亮
+          setTimeout(() => {
+            if (targetNode) {
+              targetNode.classList.remove('ant-tree-treenode-selected');
+            }
+          }, 2000);
+        }
+      }, needSwitchCategory ? 200 : 100);
+    };
+    
+    if (needSwitchCategory) {
+      // 切换到产品所属的分类
+      setCurrentCategory(product.category);
+      
+      // 等待分类切换完成后再展开和滚动
+      // 使用稍长的延迟确保树形数据已更新
+      setTimeout(() => {
+        locateProduct(targetProductId!);
+      }, 200);
+    } else {
+      // 当前分类正确，直接展开和滚动
+      locateProduct(targetProductId);
+    }
 
     setAutoExpandEnabled(true); // 重新启用自动展开
-  }, [selectedProduct, expandedKeys]);
+  }, [selectedProduct, activeTabId, tabs, products, currentCategory, expandedKeys, setCurrentCategory]);
 
   // 注册快捷键
   useTreeShortcuts({

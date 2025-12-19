@@ -120,13 +120,17 @@ export function MainContent() {
   const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
 
   const selectedProductData = useMemo(() => {
-    // 工作流分类：从 products 中查找
-    if (isWorkflowCategory) {
-      return products.find(p => p.id === selectedProduct);
+    // 如果有选中的产品，尝试查找产品数据（支持跨工作流显示标签页内容）
+    if (selectedProduct) {
+      const product = products.find(p => p.id === selectedProduct);
+      // 如果是工作流分类，返回产品数据；如果是普通文件夹，也返回产品数据（用于标签页显示）
+      if (product) {
+        return product;
+      }
     }
-    // 普通文件夹：不需要产品数据
+    // 普通文件夹模式：不需要产品数据
     return null;
-  }, [products, selectedProduct, currentCategory, isWorkflowCategory]);
+  }, [products, selectedProduct]);
 
   // 打开编辑产品弹窗
   const handleEditProduct = useCallback(() => {
@@ -188,13 +192,8 @@ export function MainContent() {
       setSelectedFileIndices([]);
       setLastSelectedIndex(-1);
       
-      // 工作流模式：需要产品数据和子文件夹
-      if (isWorkflowCategory) {
-        if (!selectedFolder || !selectedProductData) {
-          setFiles([]);
-          return;
-        }
-
+      // 如果有产品数据且选中了子文件夹，使用工作流模式（支持跨分类显示）
+      if (selectedProductData && selectedFolder) {
         setLoading(true);
         try {
           // 获取选中文件夹的路径
@@ -208,6 +207,7 @@ export function MainContent() {
           const folderKey = folderKeyMap[selectedFolder];
           if (!folderKey) {
             setFiles([]);
+            setLoading(false);
             return;
           }
 
@@ -225,14 +225,11 @@ export function MainContent() {
         } finally {
           setLoading(false);
         }
+        return;
       }
+      
       // 普通文件夹模式：直接从路径加载
-      else {
-        if (!selectedProduct) {
-          setFiles([]);
-          return;
-        }
-
+      if (selectedProduct && !selectedProductData) {
         setLoading(true);
         try {
           if (window.electronAPI?.listFiles) {
@@ -247,11 +244,15 @@ export function MainContent() {
         } finally {
           setLoading(false);
         }
+        return;
       }
+      
+      // 没有选中产品或文件夹，清空文件列表
+      setFiles([]);
     };
 
     loadFiles();
-  }, [selectedFolder, selectedProductData, selectedProduct, isWorkflowCategory]);
+  }, [selectedFolder, selectedProductData, selectedProduct]);
 
   // 加载图片分辨率
   useEffect(() => {
@@ -1172,8 +1173,8 @@ export function MainContent() {
     );
   }
 
-  // 工作流模式下，如果产品数据不存在，显示错误
-  if (isWorkflowCategory && !selectedProductData) {
+  // 如果有选中的产品但没有产品数据，显示错误（支持跨分类检查）
+  if (selectedProduct && !selectedProductData) {
     return (
       <div style={{
         height: '100%',
@@ -1205,8 +1206,8 @@ export function MainContent() {
       padding: '24px',
       boxSizing: 'border-box'
     }}>
-      {/* 产品信息卡片 - 只在工作流模式下显示 */}
-      {isWorkflowCategory && selectedProductData && (
+      {/* 产品信息卡片 - 有产品数据时显示（支持跨分类显示） */}
+      {selectedProductData && (
       <Card
         style={{ 
           marginBottom: '16px', 
@@ -1356,8 +1357,8 @@ export function MainContent() {
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>
-                  {isWorkflowCategory 
-                    ? (selectedFolder && folderNames[selectedFolder] || selectedFolder)
+                  {selectedProductData && selectedFolder
+                    ? (folderNames[selectedFolder] || selectedFolder)
                     : (selectedProduct?.split('/').pop() || '文件列表')
                   }
                 </span>
@@ -1389,7 +1390,7 @@ export function MainContent() {
                     size="small"
                     icon={normalizing ? <LoadingOutlined /> : <FormatPainterOutlined />}
                     onClick={handleNormalizeFileNames}
-                    disabled={files.length === 0 || normalizing || !isWorkflowCategory}
+                    disabled={files.length === 0 || normalizing || !selectedProductData}
                   >
                     规范命名
                   </Button>
