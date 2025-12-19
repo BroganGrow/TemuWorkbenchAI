@@ -47,6 +47,7 @@ export interface HistoryItem {
 export interface TabItem {
   id: string; // 使用 product path 作为唯一标识
   productPath: string;
+  productId: string; // 产品ID（用于查找产品数据）
   productName: string;
   folderId: string | null; // 当前选中的子文件夹
 }
@@ -187,7 +188,7 @@ export interface AppState {
   canGoForward: () => boolean;
 
   // 标签页管理
-  openTab: (productPath: string, productName: string) => void;
+  openTab: (productPath: string, productId: string, productName: string, switchToTab?: boolean) => void;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
   updateTabFolder: (tabId: string, folderId: string | null) => void;
@@ -403,7 +404,7 @@ export const useAppStore = create<AppState>()(
       },
 
       // 标签页管理
-      openTab: (productPath, productName) => {
+      openTab: (productPath, productId, productName, switchToTab = true) => {
         const state = get();
         const tabId = productPath;
         
@@ -411,17 +412,22 @@ export const useAppStore = create<AppState>()(
         const existingTab = state.tabs.find(t => t.id === tabId);
         
         if (existingTab) {
-          // 标签页已存在，只需切换到该标签页
-          set({ 
-            activeTabId: tabId,
-            selectedProduct: productPath,
-            selectedFolder: existingTab.folderId
-          });
+          // 标签页已存在
+          if (switchToTab) {
+            // 切换到该标签页
+            set({ 
+              activeTabId: tabId,
+              selectedProduct: existingTab.productId, // 使用产品ID，不是路径
+              selectedFolder: existingTab.folderId
+            });
+          }
+          // 如果不切换，什么都不做，保持当前活动标签页
         } else {
           // 创建新标签页
           const newTab: TabItem = {
             id: tabId,
             productPath,
+            productId,
             productName,
             folderId: null
           };
@@ -429,7 +435,7 @@ export const useAppStore = create<AppState>()(
           set({ 
             tabs: [...state.tabs, newTab],
             activeTabId: tabId,
-            selectedProduct: productPath,
+            selectedProduct: productId, // 使用产品ID，不是路径
             selectedFolder: null
           });
         }
@@ -451,7 +457,7 @@ export const useAppStore = create<AppState>()(
             set({
               tabs: newTabs,
               activeTabId: newActiveTab.id,
-              selectedProduct: newActiveTab.productPath,
+              selectedProduct: newActiveTab.productId, // 使用产品ID，不是路径
               selectedFolder: newActiveTab.folderId
             });
           } else {
@@ -475,7 +481,7 @@ export const useAppStore = create<AppState>()(
         if (tab) {
           set({
             activeTabId: tabId,
-            selectedProduct: tab.productPath,
+            selectedProduct: tab.productId, // 使用产品ID，不是路径
             selectedFolder: tab.folderId
           });
         }
@@ -507,7 +513,7 @@ export const useAppStore = create<AppState>()(
           set({
             tabs: [tab],
             activeTabId: tabId,
-            selectedProduct: tab.productPath,
+            selectedProduct: tab.productId, // 使用产品ID，不是路径
             selectedFolder: tab.folderId
           });
         }

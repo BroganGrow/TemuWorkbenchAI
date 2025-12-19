@@ -50,7 +50,10 @@ export function FileTree({ onDrop }: FileTreeProps) {
     setSelectedProduct,
     setSelectedFolder,
     removeProduct,
-    openTab
+    openTab,
+    activeTabId,
+    updateTabFolder,
+    tabs
   } = useAppStore();
 
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
@@ -235,12 +238,27 @@ export function FileTree({ onDrop }: FileTreeProps) {
       if (key.includes('-')) {
         // 选中的是子文件夹
         const [productId, folderKey] = key.split('-');
-        setSelectedProduct(productId);
-        setSelectedFolder(folderKey);
+        const product = products.find(p => p.id === productId);
+        if (product) {
+          // 先确保产品标签页已打开
+          openTab(product.path, product.id, `${product.id} - ${product.name}`);
+          // 然后更新选中的文件夹
+          setSelectedProduct(productId);
+          setSelectedFolder(folderKey);
+          // 更新标签页的文件夹状态
+          if (activeTabId === product.path) {
+            updateTabFolder(product.path, folderKey);
+          }
+        }
       } else {
-        // 选中的是产品
-        setSelectedProduct(key);
-        setSelectedFolder(null);
+        // 选中的是产品 - 自动打开标签页
+        const product = products.find(p => p.id === key);
+        if (product) {
+          // 检查标签页是否已存在
+          const tabExists = tabs.find(t => t.id === product.path);
+          // 如果标签页已存在，不切换；如果不存在，创建并切换
+          openTab(product.path, product.id, `${product.id} - ${product.name}`, !tabExists);
+        }
       }
     } 
     // 普通文件夹：直接选择文件夹/文件
@@ -251,8 +269,8 @@ export function FileTree({ onDrop }: FileTreeProps) {
     }
   };
 
-  // 双击打开标签页
-  const handleDoubleClick = (e: React.MouseEvent, node: DataNode) => {
+  // 双击打开标签页（保留此功能，虽然单击也会打开）
+  const handleDoubleClick = (_e: React.MouseEvent, node: DataNode) => {
     if (!isWorkflowCategory) return;
     
     const key = node.key as string;
@@ -261,7 +279,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
     if (!key.includes('-')) {
       const product = products.find(p => p.id === key);
       if (product) {
-        openTab(product.path, `${product.id} - ${product.name}`);
+        openTab(product.path, product.id, `${product.id} - ${product.name}`);
       }
     }
   };
@@ -272,7 +290,7 @@ export function FileTree({ onDrop }: FileTreeProps) {
       if (e.key === 'Enter' && selectedProduct && !selectedFolder && isWorkflowCategory) {
         const product = products.find(p => p.id === selectedProduct);
         if (product) {
-          openTab(product.path, `${product.id} - ${product.name}`);
+          openTab(product.path, product.id, `${product.id} - ${product.name}`);
         }
       }
     };
