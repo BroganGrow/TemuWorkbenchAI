@@ -16,6 +16,7 @@ export function ResizableSider({
   const [width, setWidth] = useState(defaultWidth);
   const [isResizing, setIsResizing] = useState(false);
   const siderRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -30,6 +31,10 @@ export function ResizableSider({
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      // 释放鼠标时，立即重置拖拽手柄的背景色
+      if (handleRef.current) {
+        handleRef.current.style.background = 'transparent';
+      }
     };
 
     if (isResizing) {
@@ -62,6 +67,7 @@ export function ResizableSider({
       
       {/* 拖拽手柄 */}
       <div
+        ref={handleRef}
         onMouseDown={() => setIsResizing(true)}
         style={{
           position: 'absolute',
@@ -75,7 +81,9 @@ export function ResizableSider({
           transition: 'background 0.2s'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = '#fd7a45';
+          if (!isResizing) {
+            e.currentTarget.style.background = '#fd7a45';
+          }
         }}
         onMouseLeave={(e) => {
           if (!isResizing) {
