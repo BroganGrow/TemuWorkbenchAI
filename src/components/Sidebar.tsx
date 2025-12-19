@@ -313,17 +313,6 @@ export function Sidebar() {
         />
       </div>
 
-      {/* 侧边栏底部信息 */}
-      {!sidebarCollapsed && (
-        <div style={{
-          padding: '16px',
-          borderTop: '1px solid var(--border-color)',
-          fontSize: '12px',
-          color: 'var(--text-secondary)'
-        }}>
-          <div>总产品数: {products.length}</div>
-        </div>
-      )}
     </div>
   );
 }
