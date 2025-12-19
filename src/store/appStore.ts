@@ -194,6 +194,7 @@ export interface AppState {
   updateTabFolder: (tabId: string, folderId: string | null) => void;
   closeAllTabs: () => void;
   closeOtherTabs: (tabId: string) => void;
+  reorderTabs: (oldIndex: number, newIndex: number) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -527,6 +528,14 @@ export const useAppStore = create<AppState>()(
             selectedFolder: tab.folderId
           });
         }
+      },
+
+      reorderTabs: (oldIndex, newIndex) => {
+        const state = get();
+        const newTabs = [...state.tabs];
+        const [movedTab] = newTabs.splice(oldIndex, 1);
+        newTabs.splice(newIndex, 0, movedTab);
+        set({ tabs: newTabs });
       }
     }),
     {

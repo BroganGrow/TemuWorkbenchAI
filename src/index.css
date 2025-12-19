@@ -473,3 +473,22 @@ code {
 [data-theme='paper'] .tab-close-button:hover {
   background: rgba(141, 110, 99, 0.15) !important;
 }
+
+/* 标签页拖拽样式 */
+.tab-item[data-dragging="true"] {
+  opacity: 0.5 !important;
+  z-index: 1000 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.tab-bar:has(.tab-item[data-dragging="true"]) {
+  cursor: grabbing !important;
+}
+
+.tab-item:not([data-dragging="true"]) {
+  cursor: grab;
+}
+
+.tab-item:active:not([data-dragging="true"]) {
+  cursor: grabbing;
+}
