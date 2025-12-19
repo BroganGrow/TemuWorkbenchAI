@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
-  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input, Dropdown, Popconfirm 
+  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input, Dropdown, Popconfirm, Checkbox 
 } from 'antd';
 
 const { TextArea } = Input;
@@ -68,7 +68,7 @@ export function MainContent() {
   } = useAppStore();
 
   const { aiModels } = useAppStore();
-  const { settings } = useSettingsStore();
+  const { settings, updateBasicSettings } = useSettingsStore();
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -89,6 +89,7 @@ export function MainContent() {
   const [normalizeConfirmOpen, setNormalizeConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
+  const [selectedFileIndex, setSelectedFileIndex] = useState<number>(-1);
   // 编辑产品弹窗状态
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editProductInfo, setEditProductInfo] = useState<{ path: string; folderName: string } | undefined>(undefined);
@@ -178,8 +179,9 @@ export function MainContent() {
   // 加载文件列表
   useEffect(() => {
     const loadFiles = async () => {
-      // 切换文件夹时清空分辨率缓存
+      // 切换文件夹时清空分辨率缓存和选中状态
       setFileResolutions({});
+      setSelectedFileIndex(-1);
       
       // 工作流模式：需要产品数据和子文件夹
       if (isWorkflowCategory) {
@@ -817,6 +819,44 @@ export function MainContent() {
     };
   }, [selectedProductData, selectedFolder]);
 
+  // Del 键删除文件功能
+  useEffect(() => {
+    const handleDelete = (e: KeyboardEvent) => {
+      // 只在按下 Delete 键时触发
+      if (e.key !== 'Delete') return;
+      
+      // 如果焦点在输入框或文本区域，不拦截删除
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+      
+      // 必须有选中的文件
+      if (selectedFileIndex < 0 || selectedFileIndex >= files.length) {
+        return;
+      }
+      
+      e.preventDefault();
+      
+      const fileToDelete = files[selectedFileIndex];
+      
+      // 根据设置决定是否显示确认对话框
+      if (settings.basic.showDeleteConfirmation) {
+        setFileToDelete(fileToDelete);
+        setDeleteConfirmOpen(true);
+      } else {
+        // 直接删除
+        handleDeleteFile(fileToDelete);
+      }
+    };
+    
+    window.addEventListener('keydown', handleDelete);
+    
+    return () => {
+      window.removeEventListener('keydown', handleDelete);
+    };
+  }, [selectedFileIndex, files, settings.basic.showDeleteConfirmation]);
+
   const handleOpenInFolder = async (file: FileItem) => {
     try {
       if (window.electronAPI?.showInFolder) {
@@ -1322,8 +1362,11 @@ export function MainContent() {
                       style={{
                         padding: '12px 0',
                         borderBottom: '1px solid var(--border-color)',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        background: selectedFileIndex === index ? 'var(--bg-hover)' : 'transparent',
+                        transition: 'background 0.2s'
                       }}
+                      onClick={() => setSelectedFileIndex(index)}
                       onDoubleClick={() => handlePreview(file, index)}
                     >
                       <List.Item.Meta
@@ -1372,6 +1415,14 @@ export function MainContent() {
                     <Card
                       hoverable
                       size="small"
+                      style={{
+                        background: 'var(--card-bg)',
+                        border: selectedFileIndex === index ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                        cursor: 'pointer',
+                        transition: 'border 0.2s'
+                      }}
+                      onClick={() => setSelectedFileIndex(index)}
+                      onDoubleClick={() => handlePreview(file, index)}
                       cover={
                         isImageFile(file.name) ? (
                           <div style={{
@@ -1407,12 +1458,6 @@ export function MainContent() {
                           </div>
                         )
                       }
-                      style={{
-                        background: 'var(--card-bg)',
-                        borderColor: 'var(--border-color)',
-                        cursor: 'pointer'
-                      }}
-                      onDoubleClick={() => handlePreview(file, index)}
                     >
                       <Card.Meta
                         title={
@@ -2104,8 +2149,20 @@ export function MainContent() {
         cancelText="取消"
         centered
       >
-        <p>确定要删除文件 "{fileToDelete?.name}" 吗？</p>
-        <p style={{ color: '#ff4d4f', fontSize: '12px' }}>此操作不可撤销。</p>
+        <div>
+          <p style={{ marginBottom: '8px' }}>确定要删除文件 "{fileToDelete?.name}" 吗？</p>
+          <p style={{ color: '#ff4d4f', fontSize: '12px', marginBottom: '16px' }}>此操作不可撤销。</p>
+          
+          <div style={{ marginTop: '24px' }}>
+            <Checkbox
+              checked={!settings.basic.showDeleteConfirmation}
+              onChange={(e) => updateBasicSettings({ showDeleteConfirmation: !e.target.checked })}
+              style={{ fontSize: '12px', color: 'var(--text-secondary)' }}
+            >
+              不再询问
+            </Checkbox>
+          </div>
+        </div>
       </Modal>
     </div>
   );

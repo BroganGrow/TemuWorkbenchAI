@@ -1,9 +1,18 @@
-import { Modal, Tabs, Switch, Space, Typography, Button, message, Divider } from 'antd';
-import { SettingOutlined, ExportOutlined, ImportOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Modal, Tree, Switch, Space, Typography, Button, message, Input } from 'antd';
+import { 
+  SettingOutlined, 
+  ExportOutlined, 
+  ImportOutlined, 
+  ReloadOutlined,
+  SearchOutlined,
+  RightOutlined,
+  DownOutlined
+} from '@ant-design/icons';
 import { useSettingsStore } from '../store/settingsStore';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import type { DataNode } from 'antd/es/tree';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface SettingsDialogProps {
   open: boolean;
@@ -12,7 +21,9 @@ interface SettingsDialogProps {
 
 export function SettingsDialog({ open, onCancel }: SettingsDialogProps) {
   const { settings, updateBasicSettings, resetSettings, exportSettings, importSettings } = useSettingsStore();
-  const [activeTab, setActiveTab] = useState('basic');
+  const [selectedKey, setSelectedKey] = useState<string>('basic');
+  const [searchValue, setSearchValue] = useState('');
+  const [expandedKeys, setExpandedKeys] = useState<string[]>(['appearance']);
 
   // 导出设置
   const handleExport = () => {
@@ -73,88 +84,227 @@ export function SettingsDialog({ open, onCancel }: SettingsDialogProps) {
     });
   };
 
-  const tabItems = [
+  // 树形菜单数据
+  const treeData: DataNode[] = [
     {
-      key: 'basic',
-      label: '基本',
-      children: (
-        <div style={{ padding: '16px 0' }}>
-          <Space direction="vertical" size="large" style={{ width: '100%' }}>
-            {/* 文件删除确认 */}
-            <div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: '8px'
-              }}>
-                <div>
-                  <Text strong style={{ fontSize: '14px' }}>文件删除确认</Text>
-                  <div style={{ marginTop: '4px' }}>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                      删除文件时显示确认提示弹窗
-                    </Text>
-                  </div>
-                </div>
-                <Switch
-                  checked={settings.basic.showDeleteConfirmation}
-                  onChange={(checked) => updateBasicSettings({ showDeleteConfirmation: checked })}
-                />
-              </div>
-            </div>
-
-            <Divider style={{ margin: '8px 0' }} />
-
-            {/* 未来可以在这里添加更多基本设置 */}
-            <div style={{ 
-              padding: '12px', 
-              background: 'var(--bg-secondary)', 
-              borderRadius: '6px',
-              border: '1px solid var(--border-color)'
-            }}>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                💡 提示：所有设置会自动保存到本地，您也可以使用下方的导入/导出功能备份设置。
-              </Text>
-            </div>
-          </Space>
-        </div>
-      ),
+      title: '外观与行为',
+      key: 'appearance',
+      children: [
+        { title: '基本', key: 'basic' },
+      ],
     },
   ];
+
+  // 根据搜索过滤树节点
+  const filteredTreeData = useMemo(() => {
+    if (!searchValue) return treeData;
+    
+    const filterTree = (nodes: DataNode[]): DataNode[] => {
+      return nodes.reduce((acc: DataNode[], node) => {
+        const title = String(node.title).toLowerCase();
+        const matches = title.includes(searchValue.toLowerCase());
+        
+        if (node.children) {
+          const filteredChildren = filterTree(node.children);
+          if (filteredChildren.length > 0 || matches) {
+            acc.push({
+              ...node,
+              children: filteredChildren.length > 0 ? filteredChildren : node.children,
+            });
+          }
+        } else if (matches) {
+          acc.push(node);
+        }
+        
+        return acc;
+      }, []);
+    };
+    
+    return filterTree(treeData);
+  }, [searchValue]);
+
+  // 渲染右侧内容
+  const renderContent = () => {
+    switch (selectedKey) {
+      case 'basic':
+        return (
+          <div>
+            <div style={{ 
+              marginBottom: '24px',
+              paddingBottom: '16px',
+              borderBottom: '1px solid var(--border-color)'
+            }}>
+              <h2 style={{ 
+                fontSize: '20px', 
+                fontWeight: 600, 
+                margin: 0,
+                color: 'var(--text-primary)'
+              }}>
+                基本
+              </h2>
+              <Text type="secondary" style={{ fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                配置应用的基本行为和交互方式
+              </Text>
+            </div>
+
+            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+              {/* 文件删除确认 */}
+              <div style={{ 
+                padding: '16px',
+                background: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'flex-start'
+                }}>
+                  <div style={{ flex: 1, marginRight: '16px' }}>
+                    <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px' }}>
+                      文件删除确认
+                    </Text>
+                    <Text type="secondary" style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                      删除文件时显示确认提示弹窗。关闭后将直接删除文件，无需确认。
+                    </Text>
+                  </div>
+                  <Switch
+                    checked={settings.basic.showDeleteConfirmation}
+                    onChange={(checked) => updateBasicSettings({ showDeleteConfirmation: checked })}
+                  />
+                </div>
+              </div>
+
+              {/* 提示信息 */}
+              <div style={{ 
+                padding: '12px 16px', 
+                background: 'rgba(253, 122, 69, 0.1)', 
+                borderRadius: '6px',
+                border: '1px solid rgba(253, 122, 69, 0.2)'
+              }}>
+                <Text style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  💡 提示：所有设置会自动保存到本地存储中。您可以使用底部的导入/导出功能来备份或迁移设置。
+                </Text>
+              </div>
+            </Space>
+          </div>
+        );
+      
+      default:
+        return (
+          <div style={{ textAlign: 'center', padding: '48px' }}>
+            <Text type="secondary">请从左侧选择设置项</Text>
+          </div>
+        );
+    }
+  };
 
   return (
     <Modal
       title={
-        <Space>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <SettingOutlined />
           <span>设置</span>
-        </Space>
+        </div>
       }
       open={open}
       onCancel={onCancel}
-      width={600}
+      width={900}
       centered
-      footer={[
-        <Button key="reset" icon={<ReloadOutlined />} onClick={handleReset}>
-          重置设置
-        </Button>,
-        <Button key="export" icon={<ExportOutlined />} onClick={handleExport}>
-          导出设置
-        </Button>,
-        <Button key="import" icon={<ImportOutlined />} onClick={handleImport}>
-          导入设置
-        </Button>,
-        <Button key="close" type="primary" onClick={onCancel}>
-          关闭
-        </Button>,
-      ]}
+      styles={{
+        body: { padding: 0, height: '600px', overflow: 'hidden' }
+      }}
+      footer={
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px 16px',
+          borderTop: '1px solid var(--border-color)'
+        }}>
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>
+              重置
+            </Button>
+            <Button icon={<ExportOutlined />} onClick={handleExport}>
+              导出
+            </Button>
+            <Button icon={<ImportOutlined />} onClick={handleImport}>
+              导入
+            </Button>
+          </Space>
+          <Space>
+            <Button onClick={onCancel}>取消</Button>
+            <Button type="primary" onClick={onCancel}>
+              确定
+            </Button>
+          </Space>
+        </div>
+      }
     >
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={tabItems}
-        style={{ marginTop: '16px' }}
-      />
+      <div style={{ display: 'flex', height: '600px' }}>
+        {/* 左侧菜单 */}
+        <div style={{ 
+          width: '280px',
+          borderRight: '1px solid var(--border-color)',
+          background: 'var(--bg-secondary)',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* 搜索框 */}
+          <div style={{ padding: '12px' }}>
+            <Input
+              placeholder="搜索设置..."
+              prefix={<SearchOutlined style={{ color: 'var(--text-secondary)' }} />}
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              allowClear
+              style={{ 
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-color)'
+              }}
+            />
+          </div>
+
+          {/* 树形菜单 */}
+          <div style={{ flex: 1, overflow: 'auto', padding: '0 8px' }}>
+            <Tree
+              showLine={false}
+              showIcon={false}
+              switcherIcon={(props) => {
+                if (props.expanded) {
+                  return <DownOutlined style={{ fontSize: '10px' }} />;
+                }
+                return <RightOutlined style={{ fontSize: '10px' }} />;
+              }}
+              defaultExpandAll
+              expandedKeys={expandedKeys}
+              onExpand={(keys) => setExpandedKeys(keys as string[])}
+              selectedKeys={[selectedKey]}
+              onSelect={(keys) => {
+                if (keys.length > 0) {
+                  setSelectedKey(keys[0] as string);
+                }
+              }}
+              treeData={filteredTreeData}
+              style={{ 
+                background: 'transparent',
+                fontSize: '13px'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* 右侧内容区 */}
+        <div style={{ 
+          flex: 1, 
+          overflow: 'auto',
+          padding: '24px 32px',
+          background: 'var(--bg-primary)'
+        }}>
+          {renderContent()}
+        </div>
+      </div>
     </Modal>
   );
 }
