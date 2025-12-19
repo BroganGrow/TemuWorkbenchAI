@@ -883,6 +883,16 @@ export function MainContent({ panelId }: MainContentProps = {}) {
         }
       }
       
+      // ESC 取消选中（只在非预览模式下处理）
+      if (e.key === 'Escape') {
+        if (!previewVisible && selectedFileIndices.length > 0) {
+          e.preventDefault();
+          setSelectedFileIndices([]);
+          setLastSelectedIndex(-1);
+        }
+        return;
+      }
+      
       // Ctrl+A 全选
       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
         e.preventDefault();
@@ -936,7 +946,7 @@ export function MainContent({ panelId }: MainContentProps = {}) {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedFileIndices, files, settings.basic.showDeleteConfirmation]);
+  }, [selectedFileIndices, files, settings.basic.showDeleteConfirmation, previewVisible, panelId]);
 
   const handleOpenInFolder = async (file: FileItem) => {
     try {
