@@ -719,6 +719,95 @@ export function MainContent() {
     }
   }, [previewVisible]);
 
+  // Ctrl+V 粘贴文件功能
+  useEffect(() => {
+    const handlePaste = async (e: KeyboardEvent) => {
+      // 只在按下 Ctrl+V 时触发
+      if (!e.ctrlKey || e.key !== 'v') return;
+      
+      // 如果焦点在输入框或文本区域，不拦截粘贴
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+      
+      // 必须选中了产品和子文件夹
+      if (!selectedProductData || !selectedFolder) {
+        return;
+      }
+      
+      e.preventDefault();
+      
+      // 从剪贴板读取文件
+      try {
+        const electronAPI = window.electronAPI as any;
+        if (!electronAPI?.getClipboardFiles) {
+          message.warning('当前版本不支持粘贴功能');
+          return;
+        }
+        
+        const result = await electronAPI.getClipboardFiles() as { success: boolean; files?: string[]; error?: string };
+        
+        if (!result.success || !result.files || result.files.length === 0) {
+          if (result.error && result.error !== '剪贴板中没有文件') {
+            message.warning('剪贴板中没有文件');
+          }
+          return;
+        }
+        
+        // 获取目标文件夹路径
+        const folderKeyMap: Record<string, keyof typeof selectedProductData.subFolders> = {
+          'ref_images': 'ref_images',
+          'ai_raw': 'ai_raw',
+          'ai_handle': 'ai_handle',
+          'final_goods': 'final_goods'
+        };
+        
+        const targetFolderKey = folderKeyMap[selectedFolder];
+        if (!targetFolderKey) {
+          message.error('无效的文件夹');
+          return;
+        }
+        
+        const targetFolder = selectedProductData.subFolders[targetFolderKey];
+        if (!targetFolder) {
+          message.error('目标文件夹不存在');
+          return;
+        }
+        
+        // 导入文件
+        setImporting(true);
+        const productId = selectedProductData.id;
+        const importResult = await window.electronAPI.importFiles(result.files, targetFolder, productId);
+        
+        if (importResult.success.length > 0) {
+          message.success(`成功粘贴 ${importResult.success.length} 个文件`);
+          
+          // 刷新文件列表
+          const fileList = await window.electronAPI.listFiles(targetFolder);
+          const filesOnly = fileList.filter(f => !f.isDirectory);
+          setFiles(filesOnly);
+        }
+        
+        if (importResult.failed.length > 0) {
+          message.error(`${importResult.failed.length} 个文件粘贴失败`);
+          console.error('粘贴失败的文件:', importResult.failed);
+        }
+      } catch (error) {
+        console.error('粘贴文件失败:', error);
+        message.error('粘贴文件失败');
+      } finally {
+        setImporting(false);
+      }
+    };
+    
+    window.addEventListener('keydown', handlePaste);
+    
+    return () => {
+      window.removeEventListener('keydown', handlePaste);
+    };
+  }, [selectedProductData, selectedFolder]);
+
   const handleOpenInFolder = async (file: FileItem) => {
     try {
       if (window.electronAPI?.showInFolder) {
@@ -1111,21 +1200,21 @@ export function MainContent() {
       {(isWorkflowCategory ? selectedFolder : selectedProduct) ? (
         <div 
           style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
-          onDragEnter={(e) => handleDragEnter(e, selectedFolder)}
+          onDragEnter={(e) => selectedFolder && handleDragEnter(e, selectedFolder)}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          onDrop={(e) => handleDrop(e, selectedFolder)}
+          onDrop={(e) => selectedFolder && handleDrop(e, selectedFolder)}
         >
           <Card
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>
                   {isWorkflowCategory 
-                    ? (folderNames[selectedFolder] || selectedFolder)
+                    ? (selectedFolder && folderNames[selectedFolder] || selectedFolder)
                     : (selectedProduct?.split('/').pop() || '文件列表')
                   }
                 </span>
-                {dragOverFolder === selectedFolder && (
+                {selectedFolder && dragOverFolder === selectedFolder && (
                   <Tag color="orange" style={{ margin: 0 }}>
                     拖放文件到这里
                   </Tag>
@@ -1340,7 +1429,7 @@ export function MainContent() {
           </Spin>
         </Card>
         </div>
-      ) : (
+      ) : selectedProductData ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <Card
             title="标准文件夹"
@@ -1412,6 +1501,8 @@ export function MainContent() {
           </div>
         </Card>
         </div>
+      ) : (
+        <Empty description="请选择一个产品" style={{ marginTop: '100px' }} />
       )}
 
       {/* 预览模态框 */}

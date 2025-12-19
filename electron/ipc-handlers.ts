@@ -651,6 +651,67 @@ export function registerIpcHandlers() {
       };
     }
   });
+
+  /**
+   * 从系统剪贴板读取文件路径
+   */
+  ipcMain.handle('get-clipboard-files', async (): Promise<{ success: boolean; files?: string[]; error?: string }> => {
+    try {
+      const { clipboard } = await import('electron');
+      
+      // Windows: 尝试读取 CF_HDROP 格式
+      if (process.platform === 'win32') {
+        // 先尝试读取文件路径格式
+        const buffer = clipboard.readBuffer('FileNameW');
+        if (buffer && buffer.length > 0) {
+          // 解析文件路径列表
+          const text = buffer.toString('ucs2');
+          const files = text.split('\0').filter(f => f.length > 0);
+          
+          // 验证文件是否存在
+          const validFiles: string[] = [];
+          for (const file of files) {
+            if (await fs.pathExists(file)) {
+              validFiles.push(file);
+            }
+          }
+          
+          return { success: true, files: validFiles };
+        }
+      }
+      
+      // macOS/Linux 或 Windows 备用方案：尝试读取文本格式的文件路径
+      const text = clipboard.readText();
+      if (text) {
+        // 检查是否是文件路径或 file:// URI
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const validFiles: string[] = [];
+        
+        for (let line of lines) {
+          // 移除 file:// 前缀
+          if (line.startsWith('file://')) {
+            line = line.substring(7);
+          }
+          
+          // 验证文件是否存在
+          if (await fs.pathExists(line)) {
+            validFiles.push(line);
+          }
+        }
+        
+        if (validFiles.length > 0) {
+          return { success: true, files: validFiles };
+        }
+      }
+      
+      return { success: false, error: '剪贴板中没有文件' };
+    } catch (error) {
+      return {
+        success: false,
+        error: (error as Error).message
+      };
+    }
+  });
 }
 
 

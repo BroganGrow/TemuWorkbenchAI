@@ -52,6 +52,17 @@ export interface ElectronAPI {
   showInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
   openFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
   copyFileToClipboard: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+  getClipboardFiles: () => Promise<{ success: boolean; files?: string[]; error?: string }>;
+  
+  // 窗口控制 API
+  windowMinimize: () => void;
+  windowMaximize: () => void;
+  windowClose: () => void;
+  windowIsMaximized: () => Promise<boolean>;
+  
+  // 产品管理 API
+  getNextSerialNumber: (rootPath: string, productType: string) => Promise<number>;
+  updateMenuPath: (folderPath: string | null) => void;
 }
 
 // 通过contextBridge暴露API到渲染进程
@@ -83,6 +94,7 @@ const electronAPI: ElectronAPI = {
   showInFolder: (filePath: string) => ipcRenderer.invoke('show-in-folder', filePath),
   openFile: (filePath: string) => ipcRenderer.invoke('open-file', filePath),
   copyFileToClipboard: (filePath: string) => ipcRenderer.invoke('copy-file-to-clipboard', filePath),
+  getClipboardFiles: () => ipcRenderer.invoke('get-clipboard-files'),
   
   // 窗口控制 API
   windowMinimize: () => ipcRenderer.send('window-minimize'),
