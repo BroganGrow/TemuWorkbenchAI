@@ -89,7 +89,10 @@ export function MainContent() {
   const [normalizeConfirmOpen, setNormalizeConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
-  const [selectedFileIndex, setSelectedFileIndex] = useState<number>(-1);
+  const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
+  const [filesToDelete, setFilesToDelete] = useState<FileItem[]>([]);
+  const [selectedFileIndices, setSelectedFileIndices] = useState<number[]>([]);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number>(-1);
   // 编辑产品弹窗状态
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editProductInfo, setEditProductInfo] = useState<{ path: string; folderName: string } | undefined>(undefined);
@@ -181,7 +184,8 @@ export function MainContent() {
     const loadFiles = async () => {
       // 切换文件夹时清空分辨率缓存和选中状态
       setFileResolutions({});
-      setSelectedFileIndex(-1);
+      setSelectedFileIndices([]);
+      setLastSelectedIndex(-1);
       
       // 工作流模式：需要产品数据和子文件夹
       if (isWorkflowCategory) {
@@ -819,43 +823,69 @@ export function MainContent() {
     };
   }, [selectedProductData, selectedFolder]);
 
-  // Del 键删除文件功能
+  // 键盘快捷键：Ctrl+A 全选、Del 删除
   useEffect(() => {
-    const handleDelete = (e: KeyboardEvent) => {
-      // 只在按下 Delete 键时触发
-      if (e.key !== 'Delete') return;
-      
-      // 如果焦点在输入框或文本区域，不拦截删除
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果焦点在输入框或文本区域，不拦截
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
       
-      // 必须有选中的文件
-      if (selectedFileIndex < 0 || selectedFileIndex >= files.length) {
+      // Ctrl+A 全选
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        if (files.length > 0) {
+          setSelectedFileIndices(files.map((_, index) => index));
+          setLastSelectedIndex(files.length - 1);
+          message.success(`已选中 ${files.length} 个文件`);
+        }
         return;
       }
       
-      e.preventDefault();
-      
-      const fileToDelete = files[selectedFileIndex];
-      
-      // 根据设置决定是否显示确认对话框
-      if (settings.basic.showDeleteConfirmation) {
-        setFileToDelete(fileToDelete);
-        setDeleteConfirmOpen(true);
-      } else {
-        // 直接删除
-        handleDeleteFile(fileToDelete);
+      // Delete 键删除
+      if (e.key === 'Delete') {
+        // 必须有选中的文件
+        if (selectedFileIndices.length === 0) {
+          return;
+        }
+        
+        e.preventDefault();
+        
+        // 如果只选中一个文件
+        if (selectedFileIndices.length === 1) {
+          const fileToDelete = files[selectedFileIndices[0]];
+          
+          // 根据设置决定是否显示确认对话框
+          if (settings.basic.showDeleteConfirmation) {
+            setFileToDelete(fileToDelete);
+            setDeleteConfirmOpen(true);
+          } else {
+            // 直接删除
+            handleDeleteFile(fileToDelete);
+          }
+        } else {
+          // 多选删除：显示批量删除确认
+          const filesToDelete = selectedFileIndices.map(i => files[i]);
+          
+          // 根据设置决定是否显示确认对话框
+          if (settings.basic.showDeleteConfirmation) {
+            setFilesToDelete(filesToDelete);
+            setBatchDeleteConfirmOpen(true);
+          } else {
+            // 直接批量删除
+            handleBatchDeleteFiles(filesToDelete);
+          }
+        }
       }
     };
-    
-    window.addEventListener('keydown', handleDelete);
+
+    window.addEventListener('keydown', handleKeyDown);
     
     return () => {
-      window.removeEventListener('keydown', handleDelete);
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedFileIndex, files, settings.basic.showDeleteConfirmation]);
+  }, [selectedFileIndices, files, settings.basic.showDeleteConfirmation]);
 
   const handleOpenInFolder = async (file: FileItem) => {
     try {
@@ -884,7 +914,32 @@ export function MainContent() {
     }
   };
 
-  // 删除文件
+  // 处理文件点击选择（支持 Ctrl 多选、Shift 连续选择）
+  const handleFileClick = (index: number, event?: React.MouseEvent) => {
+    if (event?.ctrlKey || event?.metaKey) {
+      // Ctrl/Cmd + Click: 切换选中状态
+      setSelectedFileIndices(prev => {
+        if (prev.includes(index)) {
+          return prev.filter(i => i !== index);
+        } else {
+          return [...prev, index];
+        }
+      });
+      setLastSelectedIndex(index);
+    } else if (event?.shiftKey && lastSelectedIndex !== -1) {
+      // Shift + Click: 连续选择
+      const start = Math.min(lastSelectedIndex, index);
+      const end = Math.max(lastSelectedIndex, index);
+      const range = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+      setSelectedFileIndices(range);
+    } else {
+      // 普通点击: 单选
+      setSelectedFileIndices([index]);
+      setLastSelectedIndex(index);
+    }
+  };
+
+  // 删除单个文件
   const handleDeleteFile = async (file: FileItem) => {
     try {
       if (window.electronAPI?.deleteFile) {
@@ -893,6 +948,9 @@ export function MainContent() {
           message.success('文件已删除');
           // 从列表中移除
           setFiles(prev => prev.filter(f => f.path !== file.path));
+          // 清除选中状态
+          setSelectedFileIndices([]);
+          setLastSelectedIndex(-1);
         } else {
           message.error(result.error || '删除失败');
         }
@@ -900,6 +958,55 @@ export function MainContent() {
     } catch (error) {
       console.error('删除文件失败:', error);
       message.error('删除文件失败');
+    }
+  };
+
+  // 批量删除文件
+  const handleBatchDeleteFiles = async (filesToDelete: FileItem[]) => {
+    try {
+      if (!window.electronAPI?.deleteFile) {
+        message.error('删除功能不可用');
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+      const failedFiles: string[] = [];
+
+      // 逐个删除文件
+      for (const file of filesToDelete) {
+        try {
+          const result = await window.electronAPI.deleteFile(file.path);
+          if (result.success) {
+            successCount++;
+          } else {
+            failCount++;
+            failedFiles.push(file.name);
+          }
+        } catch (error) {
+          failCount++;
+          failedFiles.push(file.name);
+          console.error(`删除文件失败: ${file.name}`, error);
+        }
+      }
+
+      // 显示结果
+      if (successCount > 0) {
+        message.success(`成功删除 ${successCount} 个文件`);
+        // 从列表中移除已删除的文件
+        const deletedPaths = filesToDelete.map(f => f.path);
+        setFiles(prev => prev.filter(f => !deletedPaths.includes(f.path)));
+        // 清除选中状态
+        setSelectedFileIndices([]);
+        setLastSelectedIndex(-1);
+      }
+
+      if (failCount > 0) {
+        message.error(`${failCount} 个文件删除失败: ${failedFiles.join(', ')}`);
+      }
+    } catch (error) {
+      console.error('批量删除文件失败:', error);
+      message.error('批量删除文件失败');
     }
   };
 
@@ -1363,10 +1470,10 @@ export function MainContent() {
                         padding: '12px 0',
                         borderBottom: '1px solid var(--border-color)',
                         cursor: 'pointer',
-                        background: selectedFileIndex === index ? 'var(--bg-hover)' : 'transparent',
+                        background: selectedFileIndices.includes(index) ? 'var(--bg-hover)' : 'transparent',
                         transition: 'background 0.2s'
                       }}
-                      onClick={() => setSelectedFileIndex(index)}
+                      onClick={(e) => handleFileClick(index, e)}
                       onDoubleClick={() => handlePreview(file, index)}
                     >
                       <List.Item.Meta
@@ -1417,11 +1524,11 @@ export function MainContent() {
                       size="small"
                       style={{
                         background: 'var(--card-bg)',
-                        border: selectedFileIndex === index ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                        border: selectedFileIndices.includes(index) ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
                         cursor: 'pointer',
                         transition: 'border 0.2s'
                       }}
-                      onClick={() => setSelectedFileIndex(index)}
+                      onClick={(e) => handleFileClick(index, e)}
                       onDoubleClick={() => handlePreview(file, index)}
                       cover={
                         isImageFile(file.name) ? (
@@ -2152,6 +2259,77 @@ export function MainContent() {
         <div>
           <p style={{ marginBottom: '8px' }}>确定要删除文件 "{fileToDelete?.name}" 吗？</p>
           <p style={{ color: '#ff4d4f', fontSize: '12px', marginBottom: '16px' }}>此操作不可撤销。</p>
+          
+          <div style={{ marginTop: '24px' }}>
+            <Checkbox
+              checked={!settings.basic.showDeleteConfirmation}
+              onChange={(e) => updateBasicSettings({ showDeleteConfirmation: !e.target.checked })}
+              style={{ fontSize: '12px', color: 'var(--text-secondary)' }}
+            >
+              不再询问
+            </Checkbox>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 批量删除确认弹窗 */}
+      <Modal
+        title="确认批量删除"
+        open={batchDeleteConfirmOpen}
+        onOk={() => {
+          if (filesToDelete.length > 0) {
+            handleBatchDeleteFiles(filesToDelete);
+          }
+          setBatchDeleteConfirmOpen(false);
+          setFilesToDelete([]);
+        }}
+        onCancel={() => {
+          setBatchDeleteConfirmOpen(false);
+          setFilesToDelete([]);
+        }}
+        okText="删除"
+        okType="danger"
+        cancelText="取消"
+        centered
+      >
+        <div>
+          <p style={{ marginBottom: '8px' }}>确定要删除选中的 {filesToDelete.length} 个文件吗？</p>
+          <p style={{ color: '#ff4d4f', fontSize: '12px', marginBottom: '16px' }}>此操作不可撤销。</p>
+          
+          {/* 显示文件列表（最多显示5个） */}
+          {filesToDelete.length > 0 && (
+            <div style={{ 
+              maxHeight: '150px', 
+              overflow: 'auto', 
+              background: 'var(--bg-secondary)',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              marginBottom: '16px'
+            }}>
+              {filesToDelete.slice(0, 5).map((file, index) => (
+                <div key={index} style={{ 
+                  fontSize: '12px', 
+                  color: 'var(--text-secondary)',
+                  padding: '4px 0',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  • {file.name}
+                </div>
+              ))}
+              {filesToDelete.length > 5 && (
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: 'var(--text-secondary)',
+                  padding: '4px 0',
+                  fontStyle: 'italic'
+                }}>
+                  ... 还有 {filesToDelete.length - 5} 个文件
+                </div>
+              )}
+            </div>
+          )}
           
           <div style={{ marginTop: '24px' }}>
             <Checkbox
