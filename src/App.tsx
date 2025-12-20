@@ -18,6 +18,7 @@ import { TitleBar } from './components/TitleBar';
 import { AIConfigDialog } from './components/AIConfigDialog';
 import { AIPromptDialog } from './components/AIPromptDialog';
 import { SettingsDialog } from './components/SettingsDialog';
+import { ExperimentLab } from './components/ExperimentLab';
 import { ResizableSider } from './components/ResizableSider';
 import { useAppStore } from './store/appStore';
 import { isStandardWorkspace, initWorkspace } from './utils/workspaceInit';
@@ -49,6 +50,8 @@ function App() {
   const [aiConfigDialogOpen, setAIConfigDialogOpen] = useState(false);
   const [aiPromptDialogOpen, setAIPromptDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [experimentOpen, setExperimentOpen] = useState(false);
+  const [experimentType, setExperimentType] = useState<string>('');
   const [initWorkspaceLoading, setInitWorkspaceLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -57,6 +60,26 @@ function App() {
   
   // 启用标签页快捷键（Ctrl+W, Ctrl+Tab 等）
   useTabShortcuts();
+
+  // 监听实验页面打开/关闭事件
+  useEffect(() => {
+    const handleOpenExperiment = (event: CustomEvent) => {
+      setExperimentType(event.detail.type);
+      setExperimentOpen(true);
+    };
+
+    const handleCloseExperiment = () => {
+      setExperimentOpen(false);
+      setExperimentType('');
+    };
+
+    window.addEventListener('open-experiment', handleOpenExperiment as EventListener);
+    window.addEventListener('close-experiment', handleCloseExperiment);
+    return () => {
+      window.removeEventListener('open-experiment', handleOpenExperiment as EventListener);
+      window.removeEventListener('close-experiment', handleCloseExperiment);
+    };
+  }, []);
 
   // 获取实际使用的主题
   const actualTheme = useMemo(() => {
@@ -351,7 +374,15 @@ function App() {
 
             {/* 主内容区 */}
             <Layout style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              {currentCategory === 'Dashboard' ? (
+              {experimentOpen ? (
+                <Content style={{
+                  overflow: 'hidden',
+                  flex: 1,
+                  background: 'var(--bg-primary)'
+                }}>
+                  <ExperimentLab />
+                </Content>
+              ) : currentCategory === 'Dashboard' ? (
                 <Content style={{
                   overflow: 'hidden',
                   flex: 1,

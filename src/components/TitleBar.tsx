@@ -155,6 +155,20 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               ]
             },
             { 
+              key: 'experiment', 
+              label: '实验',
+              children: [
+                {
+                  key: 'image-generation',
+                  label: 'Nano Banana 图片生成',
+                  onClick: () => {
+                    // 通过自定义事件触发
+                    window.dispatchEvent(new CustomEvent('open-experiment', { detail: { type: 'image-generation' } }));
+                  }
+                }
+              ]
+            },
+            { 
               key: 'theme', 
               label: '主题',
               children: [

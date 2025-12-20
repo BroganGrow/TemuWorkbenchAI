@@ -96,35 +96,16 @@ export async function generateCompletion(
     
     // 验证：确保找到的模型就是选择的模型
     if (!targetModel) {
-      console.error('[AI Service] 模型选择验证失败:', {
-        selectedModelId,
-        availableModels: models.map(m => ({ id: m.id, name: m.name, enabled: m.enabled }))
-      });
       throw new Error(`未找到已启用的模型 "${selectedModelId}"，请检查模型配置`);
     }
     
     // 验证：确保模型ID匹配
     if (targetModel.id !== selectedModelId) {
-      console.error('[AI Service] 模型ID不匹配:', {
-        selectedModelId,
-        foundModelId: targetModel.id,
-        foundModelName: targetModel.name
-      });
       throw new Error(`模型ID不匹配：选择了 "${selectedModelId}"，但找到的是 "${targetModel.id}"`);
     }
-    
-    console.log('[AI Service] 使用选择的模型:', {
-      selectedModelId,
-      modelName: targetModel.name,
-      modelId: targetModel.id
-    });
   } else {
     // 否则使用第一个已启用的模型
     targetModel = models.find(m => m.enabled);
-    console.warn('[AI Service] 未指定模型ID，使用第一个已启用的模型:', {
-      modelId: targetModel?.id,
-      modelName: targetModel?.name
-    });
   }
   
   if (!targetModel) {
@@ -152,16 +133,6 @@ export async function generateCompletion(
     throw new Error(`模型 ${targetModel.name} 的供应商 ${provider.name} 暂不支持`);
   }
   
-  // 4. 输出最终使用的配置（用于调试）
-  console.log('[AI Service] 最终配置:', {
-    modelId: targetModel.id,
-    modelName: targetModel.name,
-    providerId: provider.id,
-    providerName: provider.name,
-    apiUrl,
-    apiModelName: modelName,
-    selectedModelId // 用于对比
-  });
 
   // 4. 根据模型类型构建请求体
   let requestBody: any;
@@ -202,13 +173,6 @@ export async function generateCompletion(
   }
 
   try {
-    // 记录实际发送的请求（用于调试）
-    console.log('[AI Service] 发送的请求:', {
-      apiUrl,
-      model: requestBody.model,
-      requestBody: JSON.stringify(requestBody, null, 2)
-    });
-    
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers,
@@ -220,11 +184,6 @@ export async function generateCompletion(
       throw new Error(`API 请求失败: ${response.status} ${errorData.error?.message || response.statusText}`);
     }
     
-    // 记录响应头中的模型信息（如果有）
-    const responseModel = response.headers.get('x-model') || response.headers.get('model');
-    if (responseModel) {
-      console.log('[AI Service] API 响应中的模型信息:', responseModel);
-    }
 
     if (!response.body) {
       throw new Error('API 响应为空');
@@ -267,15 +226,6 @@ export async function generateCompletion(
         }
       }
 
-      // 打印完整的返回结果
-      console.log('[AI Service] 模型返回的完整结果:', {
-        modelId: targetModel.id,
-        modelName: targetModel.name,
-        content: fullContent,
-        contentLength: fullContent.length
-      });
-      console.log('[AI Service] 返回内容:', fullContent);
-
       return fullContent;
     } else {
       // 标准 OpenAI 兼容格式
@@ -299,11 +249,6 @@ export async function generateCompletion(
             try {
               const data = JSON.parse(line.slice(6));
               
-              // 检查响应中是否包含模型信息
-              if (data.model && !fullContent) {
-                console.log('[AI Service] API 响应中声明的模型:', data.model);
-              }
-              
               const content = data.choices[0]?.delta?.content || '';
               if (content) {
                 fullContent += content;
@@ -317,15 +262,6 @@ export async function generateCompletion(
           }
         }
       }
-
-      // 打印完整的返回结果
-      console.log('[AI Service] 模型返回的完整结果:', {
-        modelId: targetModel.id,
-        modelName: targetModel.name,
-        content: fullContent,
-        contentLength: fullContent.length
-      });
-      console.log('[AI Service] 返回内容:', fullContent);
 
       return fullContent;
     }

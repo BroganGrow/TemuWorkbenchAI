@@ -1190,12 +1190,6 @@ export function MainContent({ panelId }: MainContentProps = {}) {
     // 验证模型选择
     if (selectedAIModelId) {
       const selectedModel = aiModels.find(m => m.id === selectedAIModelId);
-      console.log('[MainContent] 用户选择的模型:', {
-        selectedAIModelId,
-        modelName: selectedModel?.name,
-        modelEnabled: selectedModel?.enabled,
-        hasApiKey: selectedModel?.providers.some(p => p.selected && p.apiKey)
-      });
       
       if (!selectedModel) {
         message.error(`未找到模型 "${selectedAIModelId}"`);
@@ -1212,11 +1206,7 @@ export function MainContent({ panelId }: MainContentProps = {}) {
         message.error(`模型 "${selectedModel.name}" 未配置有效的 API Key`);
         return;
       }
-    } else {
-      console.warn('[MainContent] 未选择模型，将使用第一个已启用的模型');
     }
-    
-    console.log('[MainContent] 传递给 generateCompletion 的模型ID:', targetModelId);
     
     setOptimizingTitle(true);
     try {
