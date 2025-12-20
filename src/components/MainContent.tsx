@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
-  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input, Dropdown, Popconfirm, Checkbox 
+  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input, Dropdown, Popconfirm, Checkbox, Select 
 } from 'antd';
 
 const { TextArea } = Input;
@@ -95,7 +95,7 @@ export function MainContent({ panelId }: MainContentProps = {}) {
     selectedFolder = store.selectedFolder;
   }
 
-  const { aiModels } = useAppStore();
+  const { aiModels, selectedAIModelId, setSelectedAIModelId } = useAppStore();
   const { settings, updateBasicSettings } = useSettingsStore();
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1184,13 +1184,47 @@ export function MainContent({ panelId }: MainContentProps = {}) {
       return;
     }
 
+    // 确定要使用的模型
+    const targetModelId = selectedAIModelId || aiModels.find(m => m.enabled)?.id || null;
+    
+    // 验证模型选择
+    if (selectedAIModelId) {
+      const selectedModel = aiModels.find(m => m.id === selectedAIModelId);
+      console.log('[MainContent] 用户选择的模型:', {
+        selectedAIModelId,
+        modelName: selectedModel?.name,
+        modelEnabled: selectedModel?.enabled,
+        hasApiKey: selectedModel?.providers.some(p => p.selected && p.apiKey)
+      });
+      
+      if (!selectedModel) {
+        message.error(`未找到模型 "${selectedAIModelId}"`);
+        return;
+      }
+      
+      if (!selectedModel.enabled) {
+        message.error(`模型 "${selectedModel.name}" 未启用`);
+        return;
+      }
+      
+      const hasValidProvider = selectedModel.providers.some(p => p.selected && p.apiKey);
+      if (!hasValidProvider) {
+        message.error(`模型 "${selectedModel.name}" 未配置有效的 API Key`);
+        return;
+      }
+    } else {
+      console.warn('[MainContent] 未选择模型，将使用第一个已启用的模型');
+    }
+    
+    console.log('[MainContent] 传递给 generateCompletion 的模型ID:', targetModelId);
+    
     setOptimizingTitle(true);
     try {
       const prompt = aiTitlePrompt.replace('{title}', currentTitle);
 
       const optimizedTitle = await generateCompletion(aiModels, [
         { role: 'user', content: prompt }
-      ]);
+      ], targetModelId);
 
       if (optimizedTitle) {
         // 更新标题
@@ -1322,6 +1356,23 @@ export function MainContent({ panelId }: MainContentProps = {}) {
                 )}
               </div>
               <Space size="small">
+                {/* AI 模型选择器 */}
+                <Select
+                  size="small"
+                  value={selectedAIModelId || undefined}
+                  onChange={(value) => setSelectedAIModelId(value || null)}
+                  placeholder="选择模型"
+                  style={{ width: 120, fontSize: '12px' }}
+                  disabled={optimizingTitle}
+                  options={aiModels
+                    .filter(m => m.enabled)
+                    .map(m => ({
+                      value: m.id,
+                      label: m.name,
+                      disabled: !m.providers.find(p => p.selected && p.apiKey)
+                    }))
+                  }
+                />
                 <Tooltip title="AI 优化标题">
                   <Button
                     type="text"

@@ -136,6 +136,15 @@ const DEFAULT_AI_MODELS: AIModel[] = [
       { id: 'official', name: '官方', apiKey: '', selected: true },
       { id: 'grsai', name: 'Grsai', apiKey: '', selected: false }
     ]
+  },
+  {
+    id: 'xiaomi-mimo',
+    name: 'Xiaomi MIMO',
+    enabled: true,
+    providers: [
+      { id: 'official', name: '官方', apiKey: '', selected: true },
+      { id: 'siliconflow', name: '硅基流动', apiKey: '', selected: false }
+    ]
   }
 ];
 
@@ -180,6 +189,7 @@ export interface AppState {
   
   // AI 模型配置
   aiModels: AIModel[];
+  selectedAIModelId: string | null; // 当前选择的 AI 模型 ID（用于 AI 优化功能）
 
   // Actions
   setCurrentCategory: (category: string) => void;
@@ -199,6 +209,7 @@ export interface AppState {
   setAIModels: (models: AIModel[]) => void;
   updateAIModel: (modelId: string, updates: Partial<AIModel>) => void;
   updateAIProvider: (modelId: string, providerId: string, updates: Partial<AIProvider>) => void;
+  setSelectedAIModelId: (modelId: string | null) => void;
   
   // AI 优化 Prompt
   aiTitlePrompt: string;
@@ -244,6 +255,7 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       // 初始状态
       currentCategory: 'Dashboard',
+      selectedAIModelId: null, // 默认不选择，使用第一个已启用的模型
       selectedProduct: null,
       selectedFolder: null,
       theme: 'dark',
@@ -309,6 +321,8 @@ export const useAppStore = create<AppState>()(
           return model;
         })
       })),
+
+      setSelectedAIModelId: (modelId) => set({ selectedAIModelId: modelId }),
 
       aiTitlePrompt: `请优化以下 Temu 产品标题，使其更具吸引力，包含高搜索量的关键词，符合 SEO 标准，且通顺自然。
 请直接返回优化后的标题（包含中文和英文，用括号隔开，格式如：中文标题 (English Title)），不要包含其他解释或引导语。
@@ -860,6 +874,7 @@ export const useAppStore = create<AppState>()(
         viewMode: state.viewMode,
         aiModels: state.aiModels,
         aiTitlePrompt: state.aiTitlePrompt,
+        selectedAIModelId: state.selectedAIModelId,
         productTypes: state.productTypes,
         tabs: state.tabs,
         activeTabId: state.activeTabId
