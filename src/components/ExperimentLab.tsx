@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Input, Button, Upload, Image, Space, message, Select, Typography, Divider } from 'antd';
+import { Card, Input, Button, Upload, Image, Space, message, Select, Typography } from 'antd';
 import { 
   UploadOutlined, 
   PictureOutlined, 
@@ -23,7 +23,7 @@ export function ExperimentLab() {
     m.id === 'nano-banana' || m.id === 'nano-banana-pro' || m.id === 'nano-banana-fast'
   );
   
-  const [selectedModelId, setSelectedModelId] = useState<string>('nano-banana');
+  const [selectedModelId, setSelectedModelId] = useState<string>('nano-banana-fast');
   const [prompt, setPrompt] = useState<string>('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<UploadFile | null>(null);
@@ -358,7 +358,14 @@ export function ExperimentLab() {
                 <Image
                   src={generatedImage}
                   alt="生成的图片"
-                  style={{ maxWidth: '100%', borderRadius: '8px' }}
+                  style={{ 
+                    maxWidth: '600px', 
+                    maxHeight: '600px', 
+                    width: 'auto',
+                    height: 'auto',
+                    borderRadius: '8px',
+                    objectFit: 'contain'
+                  }}
                   preview={{
                     mask: '预览'
                   }}
@@ -371,35 +378,6 @@ export function ExperimentLab() {
             )}
           </Card>
         )}
-
-        {/* 使用说明 */}
-        <Card 
-          title="使用说明" 
-          style={{ marginTop: '24px', background: 'var(--card-bg)' }}
-        >
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <div>
-              <Text strong>文生图模式：</Text>
-              <Text type="secondary" style={{ display: 'block', marginTop: '4px' }}>
-                仅使用提示词生成图片，适合从零开始创作。
-              </Text>
-            </div>
-            <Divider style={{ margin: '12px 0' }} />
-            <div>
-              <Text strong>图生图模式：</Text>
-              <Text type="secondary" style={{ display: 'block', marginTop: '4px' }}>
-                上传一张参考图片，配合提示词生成新图片，适合在现有图片基础上进行修改或风格转换。
-              </Text>
-            </div>
-            <Divider style={{ margin: '12px 0' }} />
-            <div>
-              <Text strong>提示词建议：</Text>
-              <Text type="secondary" style={{ display: 'block', marginTop: '4px' }}>
-                使用清晰、具体的描述，可以包含风格、颜色、构图等元素。例如："一只可爱的猫咪，坐在窗台上，阳光洒在它身上，水彩画风格"。
-              </Text>
-            </div>
-          </Space>
-        </Card>
       </div>
     </div>
   );
