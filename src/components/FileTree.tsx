@@ -155,12 +155,20 @@ export function FileTree({ onDrop }: FileTreeProps) {
   const normalTreeData = useMemo<DataNode[]>(() => {
     if (isWorkflowCategory) return [];
     
-    return normalFolders.map(folder => ({
-      key: folder.path,
-      title: folder.name,
-      icon: folder.isDirectory ? <FolderOutlined /> : <FileOutlined />,
-      isLeaf: !folder.isDirectory
-    }));
+    return normalFolders.map(folder => {
+      // 将 01_Style Reference 显示为"样式库"
+      let displayName = folder.name;
+      if (folder.name === '01_Style Reference') {
+        displayName = '样式库';
+      }
+      
+      return {
+        key: folder.path,
+        title: displayName,
+        icon: folder.isDirectory ? <FolderOutlined /> : <FileOutlined />,
+        isLeaf: !folder.isDirectory
+      };
+    });
   }, [normalFolders, isWorkflowCategory]);
 
   // 合并树形数据

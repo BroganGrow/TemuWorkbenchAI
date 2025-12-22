@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
-  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input, Dropdown, Popconfirm, Checkbox, Select 
+  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input, Dropdown, Popconfirm, Checkbox, Select, Tabs 
 } from 'antd';
 
 const { TextArea } = Input;
@@ -95,7 +95,7 @@ export function MainContent({ panelId }: MainContentProps = {}) {
     selectedFolder = store.selectedFolder;
   }
 
-  const { aiModels, selectedAIModelId, setSelectedAIModelId } = useAppStore();
+  const { aiModels, selectedAIModelId, setSelectedAIModelId, rootPath } = useAppStore();
   const { settings, updateBasicSettings } = useSettingsStore();
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -121,6 +121,28 @@ export function MainContent({ panelId }: MainContentProps = {}) {
   const [filesToDelete, setFilesToDelete] = useState<FileItem[]>([]);
   const [selectedFileIndices, setSelectedFileIndices] = useState<number[]>([]);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number>(-1);
+  
+  // 样式库子目录状态
+  const [styleLibrarySubFolder, setStyleLibrarySubFolder] = useState<string>('01_sku_pic');
+  
+  // 检测是否在样式库的 Style Reference 目录
+  const isStyleLibrary = useMemo(() => {
+    if (currentCategory !== '00_Assets' || !selectedProduct) {
+      console.log('[样式库] 检测失败 - currentCategory:', currentCategory, 'selectedProduct:', selectedProduct);
+      return false;
+    }
+    // 处理路径，支持 Windows 和 Unix 路径分隔符
+    const normalizedPath = selectedProduct.replace(/\\/g, '/');
+    const pathParts = normalizedPath.split('/');
+    const folderName = pathParts[pathParts.length - 1];
+    // 检查是否是 01_Style Reference 目录（支持完整路径或相对路径）
+    const isStyleRef = folderName === '01_Style Reference' || normalizedPath.includes('/01_Style Reference') || normalizedPath.includes('\\01_Style Reference');
+    console.log('[样式库] 检测结果 - folderName:', folderName, 'normalizedPath:', normalizedPath, 'isStyleRef:', isStyleRef);
+    if (isStyleRef) {
+      console.log('[样式库] 检测到样式库目录:', selectedProduct);
+    }
+    return isStyleRef;
+  }, [currentCategory, selectedProduct]);
   
   // 同步选中的文件数量到全局状态（用于状态栏显示）
   useEffect(() => {
@@ -269,8 +291,59 @@ export function MainContent({ panelId }: MainContentProps = {}) {
         return;
       }
       
-      // 普通文件夹模式：直接从路径加载
-      if (selectedProduct && !selectedProductData) {
+      // 样式库模式：根据选中的子目录加载文件
+      if (isStyleLibrary) {
+        setLoading(true);
+        try {
+          // 构建样式库子目录的完整路径
+          let styleRefPath = selectedProduct;
+          // 如果 selectedProduct 为空，尝试从 rootPath 构建
+          if (!styleRefPath && rootPath) {
+            styleRefPath = `${rootPath}/00_Assets/01_Style Reference`;
+          }
+          
+          if (!styleRefPath) {
+            console.warn('[样式库] 无法确定样式库路径');
+            setFiles([]);
+            setLoading(false);
+            return;
+          }
+          
+          // 拼接子目录路径（处理不同路径分隔符）
+          const subFolderPath = `${styleRefPath}/${styleLibrarySubFolder}`.replace(/\\/g, '/').replace(/\/\//g, '/');
+          console.log('[样式库] 加载文件路径:', subFolderPath, '当前子目录:', styleLibrarySubFolder);
+          
+          if (window.electronAPI?.listFiles) {
+            const fileList = await window.electronAPI.listFiles(subFolderPath);
+            console.log('[样式库] 加载到的文件列表:', fileList.length, '个文件', fileList);
+            // 只显示文件，不显示文件夹
+            const filesOnly = fileList.filter(f => !f.isDirectory);
+            console.log('[样式库] 过滤后的文件数量:', filesOnly.length, '文件详情:', filesOnly);
+            // 确保数据格式正确
+            const formattedFiles: FileItem[] = filesOnly.map(f => ({
+              name: f.name,
+              path: f.path,
+              size: f.size || 0,
+              createTime: f.createTime,
+              modifyTime: f.modifyTime,
+              isDirectory: f.isDirectory
+            }));
+            console.log('[样式库] 格式化后的文件:', formattedFiles.length, formattedFiles);
+            setFiles(formattedFiles);
+            console.log('[样式库] setFiles 调用完成');
+          }
+        } catch (error) {
+          console.error('[样式库] 加载文件失败:', error);
+          message.error('加载文件失败');
+          setFiles([]);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+      
+      // 普通文件夹模式：直接从路径加载（排除样式库，因为样式库有特殊处理）
+      if (selectedProduct && !selectedProductData && !isStyleLibrary) {
         setLoading(true);
         try {
           if (window.electronAPI?.listFiles) {
@@ -288,12 +361,22 @@ export function MainContent({ panelId }: MainContentProps = {}) {
         return;
       }
       
-      // 没有选中产品或文件夹，清空文件列表
-      setFiles([]);
+      // 没有选中产品或文件夹，且不是样式库模式，清空文件列表
+      // 注意：不要在这里清空样式库的文件列表，因为样式库的文件已经在上面加载了
+      if (!isStyleLibrary && !selectedProduct && !selectedProductData) {
+        setFiles([]);
+      }
     };
 
     loadFiles();
-  }, [selectedFolder, selectedProductData, selectedProduct]);
+  }, [selectedFolder, selectedProductData, selectedProduct, isStyleLibrary, styleLibrarySubFolder, rootPath]);
+  
+  // 监听 files 变化（调试用）
+  useEffect(() => {
+    if (isStyleLibrary) {
+      console.log('[样式库] files 状态变化:', files.length, '个文件', files);
+    }
+  }, [files, isStyleLibrary]);
 
   // 加载图片分辨率
   useEffect(() => {
@@ -1232,45 +1315,48 @@ export function MainContent({ panelId }: MainContentProps = {}) {
     }
   };
 
-  if (!selectedProduct) {
-    return (
-      <div style={{
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg-primary)'
-      }}>
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
-            <div style={{ color: 'var(--text-secondary)' }}>
-              <div style={{ marginBottom: '8px' }}>没有打开的产品</div>
-              <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                双击左侧产品或按 Enter 键打开标签页
+  // 样式库模式不需要产品数据，直接跳过这些检查
+  if (!isStyleLibrary) {
+    if (!selectedProduct) {
+      return (
+        <div style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg-primary)'
+        }}>
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              <div style={{ color: 'var(--text-secondary)' }}>
+                <div style={{ marginBottom: '8px' }}>没有打开的产品</div>
+                <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                  双击左侧产品或按 Enter 键打开标签页
+                </div>
               </div>
-            </div>
-          }
-        />
-      </div>
-    );
-  }
+            }
+          />
+        </div>
+      );
+    }
 
-  // 如果有选中的产品但没有产品数据，显示错误（支持跨分类检查）
-  if (selectedProduct && !selectedProductData) {
-    return (
-      <div style={{
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <Empty
-          description="产品不存在"
-          style={{ color: 'var(--text-secondary)' }}
-        />
-      </div>
-    );
+    // 如果有选中的产品但没有产品数据，显示错误（支持跨分类检查）
+    if (selectedProduct && !selectedProductData) {
+      return (
+        <div style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Empty
+            description="产品不存在"
+            style={{ color: 'var(--text-secondary)' }}
+          />
+        </div>
+      );
+    }
   }
 
   const folderNames: Record<string, string> = {
@@ -1445,7 +1531,11 @@ export function MainContent({ panelId }: MainContentProps = {}) {
       )}
 
       {/* 文件列表/网格 */}
-      {(isWorkflowCategory ? selectedFolder : selectedProduct) ? (
+      {(() => {
+        const shouldShow = (isWorkflowCategory ? selectedFolder : selectedProduct) || isStyleLibrary;
+        console.log('[样式库] 渲染条件检查 - shouldShow:', shouldShow, 'isWorkflowCategory:', isWorkflowCategory, 'selectedFolder:', selectedFolder, 'selectedProduct:', selectedProduct, 'isStyleLibrary:', isStyleLibrary);
+        return shouldShow;
+      })() ? (
         <div 
           style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
           onDragEnter={(e) => selectedFolder && handleDragEnter(e, selectedFolder)}
@@ -1453,11 +1543,40 @@ export function MainContent({ panelId }: MainContentProps = {}) {
           onDragLeave={handleDragLeave}
           onDrop={(e) => selectedFolder && handleDrop(e, selectedFolder)}
         >
+          {/* 样式库横向菜单 */}
+          {isStyleLibrary && (
+            <div style={{ padding: '12px 16px 0', background: 'var(--card-bg)', borderBottom: '1px solid var(--border-color)' }}>
+              <Tabs
+                activeKey={styleLibrarySubFolder}
+                onChange={setStyleLibrarySubFolder}
+                items={[
+                  {
+                    key: '01_sku_pic',
+                    label: 'SKU规格图'
+                  },
+                  {
+                    key: '02_product_size_pic',
+                    label: '尺寸图'
+                  },
+                  {
+                    key: '03_scene_pic',
+                    label: '场景图'
+                  }
+                ]}
+                style={{ margin: 0 }}
+              />
+            </div>
+          )}
+          
           <Card
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>
-                  {selectedProductData && selectedFolder
+                  {isStyleLibrary
+                    ? (styleLibrarySubFolder === '01_sku_pic' ? 'SKU规格图' : 
+                       styleLibrarySubFolder === '02_product_size_pic' ? '尺寸图' : 
+                       styleLibrarySubFolder === '03_scene_pic' ? '场景图' : '文件列表')
+                    : selectedProductData && selectedFolder
                     ? (folderNames[selectedFolder] || selectedFolder)
                     : (selectedProduct?.split('/').pop() || '文件列表')
                   }
@@ -1510,7 +1629,11 @@ export function MainContent({ panelId }: MainContentProps = {}) {
             }}
           >
           <Spin spinning={loading || importing}>
-            {files.length === 0 ? (
+            {(() => {
+              console.log('[样式库] 渲染检查 - files.length:', files.length, 'isStyleLibrary:', isStyleLibrary, 'selectedProduct:', selectedProduct);
+              console.log('[样式库] 渲染检查 - files 内容:', files);
+              return files.length === 0;
+            })() ? (
               <Empty
                 image={<FileImageOutlined style={{ fontSize: '64px', color: dragOverFolder === selectedFolder ? '#fd7a45' : 'var(--text-secondary)' }} />}
                 description={
