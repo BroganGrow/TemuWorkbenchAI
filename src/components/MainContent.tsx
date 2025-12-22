@@ -1634,6 +1634,27 @@ export function MainContent({ panelId }: MainContentProps = {}) {
           onDragOver={(e) => !isStyleLibrary && handleDragOver(e)}
           onDragLeave={(e) => !isStyleLibrary && handleDragLeave(e)}
           onDrop={(e) => !isStyleLibrary && selectedFolder && handleDrop(e, selectedFolder)}
+          onWheel={(e) => {
+            // 只在网格视图模式下，且按住 Ctrl 键时，才调节图片大小
+            if (viewMode === 'grid' && e.ctrlKey) {
+              e.preventDefault();
+              e.stopPropagation();
+              const currentValue = imageSize === 'xs' ? 1 : imageSize === 'small' ? 2 : imageSize === 'medium' ? 3 : imageSize === 'large' ? 4 : 5;
+              const delta = e.deltaY > 0 ? -1 : 1;
+              const newValue = Math.max(1, Math.min(5, currentValue + delta));
+              const sizeMap: Record<number, 'xs' | 'small' | 'medium' | 'large' | 'xl'> = {
+                1: 'xs',
+                2: 'small',
+                3: 'medium',
+                4: 'large',
+                5: 'xl'
+              };
+              const newSize = sizeMap[newValue];
+              if (newSize) {
+                setImageSize(newSize);
+              }
+            }
+          }}
         >
           {/* 样式库横向菜单 */}
           {isStyleLibrary && (
