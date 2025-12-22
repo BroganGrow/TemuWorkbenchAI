@@ -108,14 +108,30 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               children: [
                 {
                   key: 'new-window',
-                  label: '新建窗口',
+                  label: '新建窗口（独立）',
                   icon: <PlusOutlined />,
+                  title: '创建新窗口，在任务栏中独立显示（不合并）',
                   onClick: async () => {
                     if (window.electronAPI?.createNewWindow) {
                       try {
                         await window.electronAPI.createNewWindow();
                       } catch (error) {
                         console.error('创建新窗口失败:', error);
+                      }
+                    }
+                  }
+                },
+                {
+                  key: 'new-window-merged',
+                  label: '新建窗口（合并）',
+                  icon: <PlusOutlined />,
+                  title: '创建新窗口，在任务栏中合并显示（与其他窗口合并为一个按钮）',
+                  onClick: async () => {
+                    if (window.electronAPI?.createNewWindowMerged) {
+                      try {
+                        await window.electronAPI.createNewWindowMerged();
+                      } catch (error) {
+                        console.error('创建合并窗口失败:', error);
                       }
                     }
                   }

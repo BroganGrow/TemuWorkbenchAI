@@ -27,7 +27,8 @@ const windows = new Set<BrowserWindow>();
 let windowCounter = 0;
 
 // 创建新窗口
-function createWindow() {
+// separateInTaskbar: 是否在任务栏中独立显示（不合并），默认为 true
+function createWindow(separateInTaskbar: boolean = true) {
   // 设置应用图标
   let appIcon;
   const iconPath = path.join(__dirname, '../build/icon.png');
@@ -114,25 +115,27 @@ function createWindow() {
   // 将新窗口添加到集合中
   windows.add(newWindow);
   
-  // 为每个窗口设置不同的 appUserModelId，使任务栏不合并
+  // 为每个窗口设置 appUserModelId
   // Windows 上，不同的 appUserModelId 会让窗口在任务栏中独立显示
+  // 相同的 appUserModelId 会让窗口在任务栏中合并显示
   if (process.platform === 'win32') {
-    windowCounter++;
-    const appId = `com.temuworkbench.window.${windowCounter}`;
-    
-    // 使用 BrowserWindow.setAppDetails 为每个窗口设置不同的 appUserModelId
-    // 这个方法在 Electron 中可以让每个窗口在任务栏中独立显示
     try {
       // 检查 setAppDetails 方法是否可用（Electron 较新版本）
       if (typeof (newWindow as any).setAppDetails === 'function') {
-        // 只设置 appId，不设置图标路径
-        // 让系统使用应用级别的图标（通过 app.setAppUserModelId 和窗口的 icon 属性）
-        // 这样可以避免图标丢失的问题，同时保持窗口不合并
-        (newWindow as any).setAppDetails({
-          appId: appId
-          // 不设置 appIconPath，让系统使用应用默认图标
-        });
-        console.log(`窗口 ${windowCounter} 已设置 appUserModelId: ${appId}，使用应用默认图标`);
+        if (separateInTaskbar) {
+          // 独立显示：为每个窗口设置不同的 appId
+          windowCounter++;
+          const appId = `com.temuworkbench.window.${windowCounter}`;
+          (newWindow as any).setAppDetails({
+            appId: appId
+            // 不设置 appIconPath，让系统使用应用默认图标
+          });
+          console.log(`窗口 ${windowCounter} 已设置独立 appUserModelId: ${appId}`);
+        } else {
+          // 合并显示：使用应用级别的 appId（不设置窗口级别的 appId）
+          // 这样窗口会使用应用级别的 appUserModelId，在任务栏中合并显示
+          console.log('窗口将使用应用级别的 appUserModelId，在任务栏中合并显示');
+        }
       } else {
         // 如果 setAppDetails 不可用，尝试使用 webContents 设置
         // 注意：这可能需要特定的 Electron 版本支持
@@ -201,9 +204,15 @@ app.on('window-all-closed', () => {
   }
 });
 
-// IPC: 创建新窗口
+// IPC: 创建新窗口（独立显示）
 ipcMain.handle('create-new-window', () => {
-  const newWindow = createWindow();
+  const newWindow = createWindow(true);
+  return { success: true, windowId: newWindow.id };
+});
+
+// IPC: 创建新窗口（合并显示）
+ipcMain.handle('create-new-window-merged', () => {
+  const newWindow = createWindow(false);
   return { success: true, windowId: newWindow.id };
 });
 
