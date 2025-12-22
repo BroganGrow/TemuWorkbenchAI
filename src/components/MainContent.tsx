@@ -167,6 +167,8 @@ export function MainContent({ panelId }: MainContentProps = {}) {
   const [previewResolution, setPreviewResolution] = useState<{ width: number; height: number } | null>(null);
   // 文件列表图片分辨率缓存
   const [fileResolutions, setFileResolutions] = useState<Record<string, { width: number; height: number }>>({});
+  // SVG 文件的 data URL 缓存
+  const [svgDataUrls, setSvgDataUrls] = useState<Record<string, string>>({});
 
   // 工具条位置：'corner' 右下角垂直 | 'center' 底部中央水平（从 localStorage 读取记忆）
   const [toolbarPosition, setToolbarPosition] = useState<'corner' | 'center'>(() => {
@@ -250,8 +252,9 @@ export function MainContent({ panelId }: MainContentProps = {}) {
   // 加载文件列表
   useEffect(() => {
     const loadFiles = async () => {
-      // 切换文件夹时清空分辨率缓存和选中状态
+      // 切换文件夹时清空分辨率缓存、SVG 缓存和选中状态
       setFileResolutions({});
+      setSvgDataUrls({});
       setSelectedFileIndices([]);
       setLastSelectedIndex(-1);
       
@@ -378,10 +381,49 @@ export function MainContent({ panelId }: MainContentProps = {}) {
     }
   }, [files, isStyleLibrary]);
 
-  // 加载图片分辨率
+  // 加载 SVG 文件的 data URL
   useEffect(() => {
-    // 找出是图片且尚未加载分辨率的文件
-    const imagesToLoad = files.filter(f => isImageFile(f.name) && !fileResolutions[f.path]);
+    const svgFiles = files.filter(f => f.name.toLowerCase().endsWith('.svg') && !svgDataUrls[f.path]);
+    
+    if (svgFiles.length === 0) return;
+
+    svgFiles.forEach(async (file) => {
+      try {
+        if (window.electronAPI?.readFile) {
+          const result = await window.electronAPI.readFile(file.path);
+          if (result.success && result.data) {
+            // 将 SVG 内容转换为 data URL
+            const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(result.data)}`;
+            setSvgDataUrls(prev => ({
+              ...prev,
+              [file.path]: svgDataUrl
+            }));
+            
+            // 尝试获取 SVG 的尺寸
+            const img = new window.Image();
+            img.src = svgDataUrl;
+            img.onload = () => {
+              setFileResolutions(prev => ({
+                ...prev,
+                [file.path]: { width: img.naturalWidth, height: img.naturalHeight }
+              }));
+            };
+          }
+        }
+      } catch (error) {
+        console.error('加载 SVG 文件失败:', file.name, error);
+      }
+    });
+  }, [files]);
+
+  // 加载图片分辨率（非 SVG）
+  useEffect(() => {
+    // 找出是图片且尚未加载分辨率的文件（排除 SVG）
+    const imagesToLoad = files.filter(f => 
+      isImageFile(f.name) && 
+      !f.name.toLowerCase().endsWith('.svg') &&
+      !fileResolutions[f.path]
+    );
     
     if (imagesToLoad.length === 0) return;
 
@@ -397,7 +439,7 @@ export function MainContent({ panelId }: MainContentProps = {}) {
       // 避免死循环：如果加载失败，这里目前没有处理，下次可能会重试
       // 但由于 useEffect 只依赖 files，files 不变就不会重试，所以是安全的
     });
-  }, [files]);
+  }, [files, fileResolutions]);
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('zh-CN', {
@@ -595,7 +637,7 @@ export function MainContent({ panelId }: MainContentProps = {}) {
 
   const isImageFile = (fileName: string) => {
     const ext = fileName.split('.').pop()?.toLowerCase();
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'avif', 'ico'].includes(ext || '');
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico'].includes(ext || '');
   };
 
   const isTextFile = (fileName: string) => {
@@ -606,7 +648,34 @@ export function MainContent({ panelId }: MainContentProps = {}) {
   const handlePreview = async (file: FileItem, index?: number) => {
     if (isImageFile(file.name)) {
       setPreviewType('image');
-      setPreviewContent(`file://${file.path}`);
+      // SVG 文件需要特殊处理：使用缓存的 data URL 或读取内容
+      if (file.name.toLowerCase().endsWith('.svg')) {
+        if (svgDataUrls[file.path]) {
+          // 使用缓存的 data URL
+          setPreviewContent(svgDataUrls[file.path]);
+        } else {
+          try {
+            if (window.electronAPI?.readFile) {
+              const result = await window.electronAPI.readFile(file.path);
+              if (result.success && result.data) {
+                // 将 SVG 内容转换为 data URL
+                const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(result.data)}`;
+                setSvgDataUrls(prev => ({ ...prev, [file.path]: svgDataUrl }));
+                setPreviewContent(svgDataUrl);
+              } else {
+                setPreviewContent(`file://${file.path}`);
+              }
+            } else {
+              setPreviewContent(`file://${file.path}`);
+            }
+          } catch (error) {
+            console.error('读取 SVG 文件失败:', error);
+            setPreviewContent(`file://${file.path}`);
+          }
+        }
+      } else {
+        setPreviewContent(`file://${file.path}`);
+      }
       setPreviewTitle(file.name);
       setPreviewResolution(fileResolutions[file.path] || null); // 尝试从缓存获取
       setCurrentPreviewIndex(index !== undefined ? index : files.findIndex(f => f.path === file.path));
@@ -645,7 +714,16 @@ export function MainContent({ panelId }: MainContentProps = {}) {
     const prevFile = imageFiles[prevIndex];
     const fileIndex = files.findIndex(f => f.path === prevFile.path);
     
-    setPreviewContent(`file://${prevFile.path}`);
+    // SVG 文件使用 data URL
+    if (prevFile.name.toLowerCase().endsWith('.svg')) {
+      if (svgDataUrls[prevFile.path]) {
+        setPreviewContent(svgDataUrls[prevFile.path]);
+      } else {
+        setPreviewContent(`file://${prevFile.path}`);
+      }
+    } else {
+      setPreviewContent(`file://${prevFile.path}`);
+    }
     setPreviewTitle(prevFile.name);
     setPreviewResolution(fileResolutions[prevFile.path] || null);
     setCurrentPreviewIndex(fileIndex);
@@ -663,7 +741,16 @@ export function MainContent({ panelId }: MainContentProps = {}) {
     const nextFile = imageFiles[nextIndex];
     const fileIndex = files.findIndex(f => f.path === nextFile.path);
     
-    setPreviewContent(`file://${nextFile.path}`);
+    // SVG 文件使用 data URL
+    if (nextFile.name.toLowerCase().endsWith('.svg')) {
+      if (svgDataUrls[nextFile.path]) {
+        setPreviewContent(svgDataUrls[nextFile.path]);
+      } else {
+        setPreviewContent(`file://${nextFile.path}`);
+      }
+    } else {
+      setPreviewContent(`file://${nextFile.path}`);
+    }
     setPreviewTitle(nextFile.name);
     setPreviewResolution(fileResolutions[nextFile.path] || null);
     setCurrentPreviewIndex(fileIndex);
@@ -1749,18 +1836,33 @@ export function MainContent({ panelId }: MainContentProps = {}) {
                             justifyContent: 'center',
                             overflow: 'hidden'
                           }}>
-                            <img
-                              src={`file://${file.path}`}
-                              alt={file.name}
-                              style={{
-                                maxWidth: '100%',
-                                maxHeight: '100%',
-                                objectFit: 'contain'
-                              }}
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
+                            {file.name.toLowerCase().endsWith('.svg') && svgDataUrls[file.path] ? (
+                              <img
+                                src={svgDataUrls[file.path]}
+                                alt={file.name}
+                                style={{
+                                  maxWidth: '100%',
+                                  maxHeight: '100%',
+                                  objectFit: 'contain'
+                                }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <img
+                                src={`file://${file.path}`}
+                                alt={file.name}
+                                style={{
+                                  maxWidth: '100%',
+                                  maxHeight: '100%',
+                                  objectFit: 'contain'
+                                }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            )}
                           </div>
                         ) : (
                           <div style={{
