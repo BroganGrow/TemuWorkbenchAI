@@ -157,8 +157,8 @@ export function MainContent({ panelId }: MainContentProps = {}) {
     return saved === 'true';
   });
 
-  // 判断是否是工作流分类
-  const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
+  // 判断是否是工作流分类（包括垃圾筒，因为垃圾筒也需要显示产品树结构）
+  const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory) || currentCategory === '10_Trash';
 
   const selectedProductData = useMemo(() => {
     // 如果有选中的产品，尝试查找产品数据（支持跨工作流显示标签页内容）

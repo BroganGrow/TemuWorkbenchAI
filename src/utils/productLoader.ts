@@ -6,13 +6,14 @@ import { ProductNode } from '../store/appStore';
 export async function loadAllProducts(rootPath: string): Promise<ProductNode[]> {
   const products: ProductNode[] = [];
   
-  // 所有需要扫描的分类目录
+  // 所有需要扫描的分类目录（包括垃圾筒）
   const categories = [
     '01_In_Progress',
     '02_Listing',
     '03_Waiting',
     '04_Active',
-    '05_Archive'
+    '05_Archive',
+    '10_Trash'
   ];
 
   for (const category of categories) {

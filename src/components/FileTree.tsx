@@ -5,9 +5,9 @@ import {
   FolderOpenOutlined,
   DeleteOutlined,
   EditOutlined,
-  ScissorOutlined,
   AimOutlined,
-  FileOutlined
+  FileOutlined,
+  UndoOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -63,8 +63,8 @@ export function FileTree({ onDrop }: FileTreeProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editProductInfo, setEditProductInfo] = useState<{ path: string; folderName: string } | undefined>(undefined);
 
-  // 判断是否是工作流分类
-  const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory);
+  // 判断是否是工作流分类（包括垃圾筒，因为垃圾筒也需要显示产品树结构）
+  const isWorkflowCategory = WORKFLOW_CATEGORIES.includes(currentCategory) || currentCategory === '10_Trash';
 
   // 快捷键支持
   useEffect(() => {
@@ -426,6 +426,90 @@ export function FileTree({ onDrop }: FileTreeProps) {
     });
   };
 
+  // 彻底删除产品（从垃圾筒中永久删除）
+  const handlePermanentDelete = async (productId: string) => {
+    Modal.confirm({
+      title: '确认彻底删除',
+      content: '确定要彻底删除这个产品吗？此操作不可恢复，文件将被永久删除。',
+      okText: '彻底删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const product = products.find(p => p.id === productId);
+          if (!product) {
+            message.error('产品不存在');
+            return;
+          }
+
+          if (window.electronAPI?.deleteFolder) {
+            const result = await window.electronAPI.deleteFolder(product.path);
+            if (result.success) {
+              message.success('产品已彻底删除');
+              // 触发刷新
+              useAppStore.getState().triggerRefresh();
+            } else {
+              message.error(`删除失败: ${result.error}`);
+            }
+          } else {
+            message.error('删除功能不可用');
+          }
+        } catch (error) {
+          console.error('彻底删除失败:', error);
+          message.error('彻底删除失败');
+        }
+      }
+    });
+  };
+
+  // 恢复产品到选品中
+  const handleRestoreToInProgress = async (productId: string) => {
+    try {
+      const product = products.find(p => p.id === productId);
+      if (!product) {
+        message.error('产品不存在');
+        return;
+      }
+
+      if (product.category !== '10_Trash') {
+        message.warning('产品不在垃圾筒中');
+        return;
+      }
+
+      if (!rootPath) {
+        message.error('根目录未设置');
+        return;
+      }
+
+      // 构建目标路径：rootPath/01_In_Progress/产品文件夹名
+      const oldPath = product.path;
+      const folderName = oldPath.split(/[\\/]/).pop();
+      if (!folderName) {
+        message.error('无法获取产品文件夹名');
+        return;
+      }
+
+      const newPath = `${rootPath}/01_In_Progress/${folderName}`;
+
+      // 调用 Electron API 移动文件夹
+      if (window.electronAPI?.movePath) {
+        const result = await window.electronAPI.movePath(oldPath, newPath);
+        if (result.success) {
+          message.success('产品已恢复到选品中');
+          // 触发刷新
+          useAppStore.getState().triggerRefresh();
+        } else {
+          message.error(`恢复失败: ${result.error}`);
+        }
+      } else {
+        message.error('移动功能不可用');
+      }
+    } catch (error) {
+      console.error('恢复产品失败:', error);
+      message.error('恢复产品失败');
+    }
+  };
+
   const contextMenuItems = (nodeKey: string) => {
     const isFolder = nodeKey.includes('-');
     
@@ -441,7 +525,41 @@ export function FileTree({ onDrop }: FileTreeProps) {
 
     // 查找产品数据
     const product = products.find(p => p.id === nodeKey);
+    if (!product) return [];
+
+    // 如果是垃圾筒中的产品，显示特殊菜单
+    if (currentCategory === '10_Trash') {
+      return [
+        {
+          key: 'restore',
+          icon: <UndoOutlined />,
+          label: '恢复到选品中',
+          onClick: () => handleRestoreToInProgress(nodeKey)
+        },
+        {
+          key: 'show-in-folder',
+          icon: <FolderOpenOutlined />,
+          label: '打开文件位置',
+          onClick: () => {
+            if (product) {
+              window.electronAPI.showInFolder(product.path);
+            }
+          }
+        },
+        {
+          type: 'divider' as const
+        },
+        {
+          key: 'permanent-delete',
+          icon: <DeleteOutlined />,
+          label: '彻底删除',
+          danger: true,
+          onClick: () => handlePermanentDelete(nodeKey)
+        }
+      ];
+    }
     
+    // 普通工作流分类的菜单
     return [
       {
         key: 'rename',
@@ -468,11 +586,6 @@ export function FileTree({ onDrop }: FileTreeProps) {
             window.electronAPI.showInFolder(product.path);
           }
         }
-      },
-      {
-        key: 'move',
-        icon: <ScissorOutlined />,
-        label: '移动到...'
       },
       {
         key: 'delete',
