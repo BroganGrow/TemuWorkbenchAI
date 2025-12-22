@@ -23,6 +23,8 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 // 窗口管理：使用 Set 存储所有窗口
 const windows = new Set<BrowserWindow>();
+// 窗口计数器，用于生成唯一的 appUserModelId
+let windowCounter = 0;
 
 // 创建新窗口
 function createWindow() {
@@ -30,14 +32,17 @@ function createWindow() {
   let appIcon;
   const iconPath = path.join(__dirname, '../build/icon.png');
   const iconSvgPath = path.join(__dirname, '../build/icon.svg');
+  let finalIconPath = '';
   
   // 优先使用 PNG，如果不存在则使用 SVG
   if (fs.existsSync(iconPath)) {
     appIcon = nativeImage.createFromPath(iconPath);
+    finalIconPath = iconPath;
   } else if (fs.existsSync(iconSvgPath)) {
     // 从 SVG 创建图标（Electron 支持）
     const svgContent = fs.readFileSync(iconSvgPath, 'utf-8');
     appIcon = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svgContent).toString('base64')}`);
+    finalIconPath = iconSvgPath;
   }
 
   const newWindow = new BrowserWindow({
@@ -109,11 +114,46 @@ function createWindow() {
   // 将新窗口添加到集合中
   windows.add(newWindow);
   
+  // 为每个窗口设置不同的 appUserModelId，使任务栏不合并
+  // Windows 上，不同的 appUserModelId 会让窗口在任务栏中独立显示
+  if (process.platform === 'win32') {
+    windowCounter++;
+    const appId = `com.temuworkbench.window.${windowCounter}`;
+    
+    // 使用 BrowserWindow.setAppDetails 为每个窗口设置不同的 appUserModelId
+    // 这个方法在 Electron 中可以让每个窗口在任务栏中独立显示
+    try {
+      // 检查 setAppDetails 方法是否可用（Electron 较新版本）
+      if (typeof (newWindow as any).setAppDetails === 'function') {
+        // 只设置 appId，不设置图标路径
+        // 让系统使用应用级别的图标（通过 app.setAppUserModelId 和窗口的 icon 属性）
+        // 这样可以避免图标丢失的问题，同时保持窗口不合并
+        (newWindow as any).setAppDetails({
+          appId: appId
+          // 不设置 appIconPath，让系统使用应用默认图标
+        });
+        console.log(`窗口 ${windowCounter} 已设置 appUserModelId: ${appId}，使用应用默认图标`);
+      } else {
+        // 如果 setAppDetails 不可用，尝试使用 webContents 设置
+        // 注意：这可能需要特定的 Electron 版本支持
+        console.log('setAppDetails 方法不可用，窗口将使用默认的 appUserModelId');
+      }
+    } catch (error) {
+      console.log('设置窗口 appUserModelId 失败:', error);
+    }
+  }
+  
   return newWindow;
 }
 
 // 应用准备就绪
 app.whenReady().then(() => {
+  // 设置应用的基础 appUserModelId（Windows）
+  // 这确保应用有正确的图标显示
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.temuworkbench');
+  }
+  
   // 注册IPC处理器
   registerIpcHandlers();
   
