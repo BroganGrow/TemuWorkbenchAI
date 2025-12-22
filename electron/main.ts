@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, nativeImage, Tray, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, nativeImage, Tray, Menu, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
@@ -30,7 +30,7 @@ let tray: Tray | null = null;
 
 // 创建新窗口
 // separateInTaskbar: 是否在任务栏中独立显示（不合并），默认为 true
-function createWindow(separateInTaskbar: boolean = true) {
+function createWindow(separateInTaskbar: boolean = true): BrowserWindow {
   // 设置应用图标
   let appIcon;
   const iconPath = path.join(__dirname, '../build/icon.png');
@@ -48,11 +48,45 @@ function createWindow(separateInTaskbar: boolean = true) {
     finalIconPath = iconSvgPath;
   }
 
+  // 获取主显示器尺寸
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+  
+  // 读取窗口设置（从 JSON 文件）
+  // 我们使用一个简单的 JSON 文件来存储窗口设置，便于主进程读取
+  let widthPercent = 90;
+  let heightPercent = 85;
+  let minWidthPercent = 60;
+  let minHeightPercent = 50;
+  
+  try {
+    const userDataPath = app.getPath('userData');
+    const windowSettingsPath = path.join(userDataPath, 'window-settings.json');
+    if (fs.existsSync(windowSettingsPath)) {
+      const settingsData = fs.readFileSync(windowSettingsPath, 'utf-8');
+      const parsed = JSON.parse(settingsData);
+      if (parsed) {
+        widthPercent = parsed.widthPercent ?? 90;
+        heightPercent = parsed.heightPercent ?? 85;
+        minWidthPercent = parsed.minWidthPercent ?? 60;
+        minHeightPercent = parsed.minHeightPercent ?? 50;
+      }
+    }
+  } catch (error) {
+    console.log('读取窗口设置失败，使用默认值:', error);
+  }
+  
+  // 使用屏幕尺寸的百分比
+  const windowWidth = Math.floor(screenWidth * (widthPercent / 100));
+  const windowHeight = Math.floor(screenHeight * (heightPercent / 100));
+  const minWidth = Math.floor(screenWidth * (minWidthPercent / 100));
+  const minHeight = Math.floor(screenHeight * (minHeightPercent / 100));
+
   const newWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1200,
-    minHeight: 700,
+    width: windowWidth,
+    height: windowHeight,
+    minWidth: minWidth,
+    minHeight: minHeight,
     title: '',
     frame: false, // 使用无边框窗口，自定义标题栏
     icon: appIcon, // 设置窗口图标
@@ -112,7 +146,7 @@ function createWindow(separateInTaskbar: boolean = true) {
   // 窗口关闭时隐藏到托盘，而不是真正关闭
   newWindow.on('close', (event) => {
     // 如果不是退出应用，则隐藏窗口到托盘
-    if (!app.isQuitting) {
+    if (!(app as any).isQuitting) {
       event.preventDefault();
       newWindow.hide();
       // 更新托盘菜单
@@ -229,7 +263,7 @@ function updateTrayMenu() {
     {
       label: '退出',
       click: () => {
-        app.isQuitting = true;
+        (app as any).isQuitting = true;
         app.quit();
       }
     }
@@ -327,6 +361,38 @@ ipcMain.handle('create-new-window', () => {
 ipcMain.handle('create-new-window-merged', () => {
   const newWindow = createWindow(false);
   return { success: true, windowId: newWindow.id };
+});
+
+// IPC: 更新窗口设置（保存到文件，供下次创建窗口时使用）
+ipcMain.handle('update-window-settings', async (_event, settings: { widthPercent?: number; heightPercent?: number; minWidthPercent?: number; minHeightPercent?: number }) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const windowSettingsPath = path.join(userDataPath, 'window-settings.json');
+    
+    // 读取现有设置
+    let existingSettings: any = {};
+    if (fs.existsSync(windowSettingsPath)) {
+      try {
+        const data = fs.readFileSync(windowSettingsPath, 'utf-8');
+        existingSettings = JSON.parse(data);
+      } catch (e) {
+        // 忽略解析错误
+      }
+    }
+    
+    // 合并新设置
+    const mergedSettings = {
+      ...existingSettings,
+      ...settings
+    };
+    
+    // 保存到文件
+    await fs.writeFile(windowSettingsPath, JSON.stringify(mergedSettings, null, 2), 'utf-8');
+    return { success: true };
+  } catch (error) {
+    console.error('保存窗口设置失败:', error);
+    return { success: false, error: (error as Error).message };
+  }
 });
 
 // 应用退出时清理全局快捷键和托盘

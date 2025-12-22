@@ -1,4 +1,4 @@
-import { Modal, Tree, Switch, Space, Typography, Button, message, Input } from 'antd';
+import { Modal, Tree, Switch, Space, Typography, Button, message, Input, InputNumber } from 'antd';
 import { 
   SettingOutlined, 
   ExportOutlined, 
@@ -9,7 +9,7 @@ import {
   DownOutlined
 } from '@ant-design/icons';
 import { useSettingsStore } from '../store/settingsStore';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { DataNode } from 'antd/es/tree';
 
 const { Text } = Typography;
@@ -20,10 +20,25 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ open, onCancel }: SettingsDialogProps) {
-  const { settings, updateBasicSettings, resetSettings, exportSettings, importSettings } = useSettingsStore();
+  const { settings, updateBasicSettings, updateWindowSettings, resetSettings, exportSettings, importSettings } = useSettingsStore();
   const [selectedKey, setSelectedKey] = useState<string>('basic');
   const [searchValue, setSearchValue] = useState('');
   const [expandedKeys, setExpandedKeys] = useState<string[]>(['appearance']);
+
+  // 当设置对话框打开时，确保窗口设置已同步到主进程
+  useEffect(() => {
+    if (open && settings.window && window.electronAPI?.updateWindowSettings) {
+      // 从 Zustand store 读取窗口设置，同步到主进程
+      window.electronAPI.updateWindowSettings({
+        widthPercent: settings.window.widthPercent,
+        heightPercent: settings.window.heightPercent,
+        minWidthPercent: settings.window.minWidthPercent,
+        minHeightPercent: settings.window.minHeightPercent,
+      }).catch((error) => {
+        console.error('同步窗口设置到主进程失败:', error);
+      });
+    }
+  }, [open, settings.window]);
 
   // 导出设置
   const handleExport = () => {
@@ -86,13 +101,14 @@ export function SettingsDialog({ open, onCancel }: SettingsDialogProps) {
 
   // 树形菜单数据
   const treeData: DataNode[] = [
-    {
-      title: '外观与行为',
-      key: 'appearance',
-      children: [
-        { title: '基本', key: 'basic' },
-      ],
-    },
+      {
+        title: '外观与行为',
+        key: 'appearance',
+        children: [
+          { title: '基本', key: 'basic' },
+          { title: '窗口', key: 'window' },
+        ],
+      },
   ];
 
   // 根据搜索过滤树节点
@@ -184,6 +200,194 @@ export function SettingsDialog({ open, onCancel }: SettingsDialogProps) {
               }}>
                 <Text style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                   💡 提示：所有设置会自动保存到本地存储中。您可以使用底部的导入/导出功能来备份或迁移设置。
+                </Text>
+              </div>
+            </Space>
+          </div>
+        );
+      
+      case 'window':
+        // 安全检查：确保 window 设置存在，如果不存在则使用默认值
+        const windowSettings = settings.window || {
+          widthPercent: 90,
+          heightPercent: 85,
+          minWidthPercent: 60,
+          minHeightPercent: 50,
+        };
+        
+        return (
+          <div>
+            <div style={{ 
+              marginBottom: '24px',
+              paddingBottom: '16px',
+              borderBottom: '1px solid var(--border-color)'
+            }}>
+              <h2 style={{ 
+                fontSize: '20px', 
+                fontWeight: 600, 
+                margin: 0,
+                color: 'var(--text-primary)'
+              }}>
+                窗口
+              </h2>
+              <Text type="secondary" style={{ fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                配置新窗口的默认大小（相对于屏幕尺寸的百分比）
+              </Text>
+            </div>
+
+            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+              {/* 窗口宽度百分比 */}
+              <div style={{ 
+                padding: '16px',
+                background: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)'
+              }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px' }}>
+                    窗口宽度百分比
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                    新窗口的宽度占屏幕宽度的百分比（10-100）
+                  </Text>
+                </div>
+                <InputNumber
+                  min={10}
+                  max={100}
+                  value={windowSettings.widthPercent}
+                  onChange={(value) => {
+                    if (value !== null && value >= 10 && value <= 100) {
+                      updateWindowSettings({ widthPercent: value });
+                      // 同步保存到主进程
+                      if (window.electronAPI?.updateWindowSettings) {
+                        window.electronAPI.updateWindowSettings({ widthPercent: value }).catch((error) => {
+                          console.error('保存窗口设置到主进程失败:', error);
+                        });
+                      }
+                    }
+                  }}
+                  addonAfter="%"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              {/* 窗口高度百分比 */}
+              <div style={{ 
+                padding: '16px',
+                background: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)'
+              }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px' }}>
+                    窗口高度百分比
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                    新窗口的高度占屏幕高度的百分比（10-100）
+                  </Text>
+                </div>
+                <InputNumber
+                  min={10}
+                  max={100}
+                  value={windowSettings.heightPercent}
+                  onChange={(value) => {
+                    if (value !== null && value >= 10 && value <= 100) {
+                      updateWindowSettings({ heightPercent: value });
+                      // 同步保存到主进程
+                      if (window.electronAPI?.updateWindowSettings) {
+                        window.electronAPI.updateWindowSettings({ heightPercent: value }).catch((error) => {
+                          console.error('保存窗口设置到主进程失败:', error);
+                        });
+                      }
+                      message.info('窗口设置已保存，新创建的窗口将使用新尺寸');
+                    }
+                  }}
+                  addonAfter="%"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              {/* 最小宽度百分比 */}
+              <div style={{ 
+                padding: '16px',
+                background: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)'
+              }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px' }}>
+                    最小宽度百分比
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                    窗口可调整的最小宽度占屏幕宽度的百分比（10-100）
+                  </Text>
+                </div>
+                <InputNumber
+                  min={10}
+                  max={100}
+                  value={windowSettings.minWidthPercent}
+                  onChange={(value) => {
+                    if (value !== null && value >= 10 && value <= 100) {
+                      updateWindowSettings({ minWidthPercent: value });
+                      // 同步保存到主进程
+                      if (window.electronAPI?.updateWindowSettings) {
+                        window.electronAPI.updateWindowSettings({ minWidthPercent: value }).catch((error) => {
+                          console.error('保存窗口设置到主进程失败:', error);
+                        });
+                      }
+                      message.info('窗口设置已保存，新创建的窗口将使用新尺寸');
+                    }
+                  }}
+                  addonAfter="%"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              {/* 最小高度百分比 */}
+              <div style={{ 
+                padding: '16px',
+                background: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)'
+              }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px' }}>
+                    最小高度百分比
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                    窗口可调整的最小高度占屏幕高度的百分比（10-100）
+                  </Text>
+                </div>
+                <InputNumber
+                  min={10}
+                  max={100}
+                  value={windowSettings.minHeightPercent}
+                  onChange={(value) => {
+                    if (value !== null && value >= 10 && value <= 100) {
+                      updateWindowSettings({ minHeightPercent: value });
+                      // 同步保存到主进程
+                      if (window.electronAPI?.updateWindowSettings) {
+                        window.electronAPI.updateWindowSettings({ minHeightPercent: value }).catch((error) => {
+                          console.error('保存窗口设置到主进程失败:', error);
+                        });
+                      }
+                      message.info('窗口设置已保存，新创建的窗口将使用新尺寸');
+                    }
+                  }}
+                  addonAfter="%"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              {/* 提示信息 */}
+              <div style={{ 
+                padding: '12px 16px', 
+                background: 'rgba(253, 122, 69, 0.1)', 
+                borderRadius: '6px',
+                border: '1px solid rgba(253, 122, 69, 0.2)'
+              }}>
+                <Text style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  💡 提示：修改这些设置后，新创建的窗口将使用新的尺寸。已打开的窗口不受影响。
                 </Text>
               </div>
             </Space>

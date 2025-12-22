@@ -95,6 +95,9 @@ declare global {
       // 窗口管理API
       createNewWindow: () => Promise<{ success: boolean; windowId?: number }>;
       createNewWindowMerged: () => Promise<{ success: boolean; windowId?: number }>;
+      
+      // 窗口设置API
+      updateWindowSettings: (settings: { widthPercent?: number; heightPercent?: number; minWidthPercent?: number; minHeightPercent?: number }) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }

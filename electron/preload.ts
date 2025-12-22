@@ -67,6 +67,9 @@ export interface ElectronAPI {
   // 窗口管理 API
   createNewWindow: () => Promise<{ success: boolean; windowId?: number }>;
   createNewWindowMerged: () => Promise<{ success: boolean; windowId?: number }>;
+  
+  // 窗口设置 API
+  updateWindowSettings: (settings: { widthPercent?: number; heightPercent?: number; minWidthPercent?: number; minHeightPercent?: number }) => Promise<{ success: boolean }>;
 }
 
 // 通过contextBridge暴露API到渲染进程
@@ -112,7 +115,10 @@ const electronAPI: ElectronAPI = {
   
   // 窗口管理 API
   createNewWindow: () => ipcRenderer.invoke('create-new-window'),
-  createNewWindowMerged: () => ipcRenderer.invoke('create-new-window-merged')
+  createNewWindowMerged: () => ipcRenderer.invoke('create-new-window-merged'),
+  
+  // 窗口设置 API
+  updateWindowSettings: (settings) => ipcRenderer.invoke('update-window-settings', settings)
 };
 
 // 暴露到window对象
