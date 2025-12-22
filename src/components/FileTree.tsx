@@ -49,7 +49,6 @@ export function FileTree({ onDrop }: FileTreeProps) {
     selectedFolder,
     setSelectedProduct,
     setSelectedFolder,
-    removeProduct,
     openTab,
     activeTabId,
     updateTabFolder,
@@ -369,16 +368,60 @@ export function FileTree({ onDrop }: FileTreeProps) {
     setExpandedKeys(expandedKeysValue as string[]);
   };
 
-  const handleDelete = (productId: string) => {
+  const handleDelete = async (productId: string) => {
     Modal.confirm({
       title: '确认删除',
-      content: '确定要删除这个产品吗？此操作不可恢复。',
-      okText: '删除',
+      content: '确定要将此产品移动到垃圾筒吗？',
+      okText: '移动到垃圾筒',
       okType: 'danger',
       cancelText: '取消',
-      onOk: () => {
-        removeProduct(productId);
-        message.success('产品已删除');
+      onOk: async () => {
+        try {
+          // 获取产品信息
+          const product = products.find(p => p.id === productId);
+          if (!product) {
+            message.error('产品不存在');
+            return;
+          }
+
+          // 如果产品已经在垃圾筒，则提示
+          if (product.category === '10_Trash') {
+            message.warning('产品已在垃圾筒中');
+            return;
+          }
+
+          if (!rootPath) {
+            message.error('根目录未设置');
+            return;
+          }
+
+          // 构建目标路径：rootPath/10_Trash/产品文件夹名
+          const oldPath = product.path;
+          const folderName = oldPath.split(/[\\/]/).pop();
+          if (!folderName) {
+            message.error('无法获取产品文件夹名');
+            return;
+          }
+
+          const newPath = `${rootPath}/10_Trash/${folderName}`;
+
+          // 调用 Electron API 移动文件夹
+          if (window.electronAPI?.movePath) {
+            const result = await window.electronAPI.movePath(oldPath, newPath);
+            if (result.success) {
+              message.success('产品已移动到垃圾筒');
+              // 触发刷新
+              useAppStore.getState().triggerRefresh();
+            } else {
+              message.error(`移动失败: ${result.error}`);
+            }
+          } else {
+            message.error('移动功能不可用');
+          }
+        } catch (error) {
+          console.error('移动到垃圾筒失败:', error);
+          message.error('移动到垃圾筒失败');
+        }
       }
     });
   };

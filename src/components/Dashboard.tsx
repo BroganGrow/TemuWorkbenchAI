@@ -21,19 +21,19 @@ export function Dashboard() {
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
     CATEGORIES.forEach(cat => {
-      if (cat.key !== 'Dashboard' && cat.key !== '00_Assets') {
+      if (cat.key !== 'Dashboard' && cat.key !== '00_Assets' && cat.key !== '10_Trash') {
         counts[cat.key] = products.filter(p => p.category === cat.key).length;
       }
     });
     return counts;
   }, [products]);
 
-  // 总产品数（不包含素材库）
-  const totalProducts = products.filter(p => p.category !== '00_Assets').length;
+  // 总产品数（不包含素材库和垃圾筒）
+  const totalProducts = products.filter(p => p.category !== '00_Assets' && p.category !== '10_Trash').length;
 
-  // 最近编辑/创建的产品（取前5个）
+  // 最近编辑/创建的产品（取前5个，不包含垃圾筒）
   const recentProducts = [...products]
-    .filter(p => p.category !== '00_Assets')
+    .filter(p => p.category !== '00_Assets' && p.category !== '10_Trash')
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
 

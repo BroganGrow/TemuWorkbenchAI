@@ -9,7 +9,8 @@ import {
   FolderOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  DashboardOutlined
+  DashboardOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 
@@ -20,7 +21,8 @@ export const CATEGORIES = [
   { key: '02_Listing', label: '制作中', icon: EditOutlined, color: '#fd7a45' },
   { key: '03_Waiting', label: '待发货', icon: ClockCircleOutlined, color: '#9e7aff' },
   { key: '04_Active', label: '已上架', icon: CheckCircleOutlined, color: '#52c41a' },
-  { key: '05_Archive', label: '已下架', icon: FolderOutlined, color: '#595959' }
+  { key: '05_Archive', label: '已下架', icon: FolderOutlined, color: '#595959' },
+  { key: '10_Trash', label: '垃圾筒', icon: DeleteOutlined, color: '#ff4d4f' }
 ];
 
 export function Sidebar() {
@@ -84,10 +86,11 @@ export function Sidebar() {
     return products.filter(p => p.category === categoryKey).length;
   };
 
-  // 分离控制台、公共素材库和其他分类
+  // 分离控制台、公共素材库、工作流分类和垃圾筒
   const dashboardCategory = CATEGORIES[0]; // 控制台
   const assetsCategory = CATEGORIES[1]; // 公共素材库
-  const workflowCategories = CATEGORIES.slice(2); // 其他工作流分类
+  const workflowCategories = CATEGORIES.slice(2, -1); // 工作流分类（排除垃圾筒）
+  const trashCategory = CATEGORIES[CATEGORIES.length - 1]; // 垃圾筒
 
   const createMenuItem = (cat: typeof CATEGORIES[0]) => {
     // 控制台不需要显示数量
@@ -181,6 +184,7 @@ export function Sidebar() {
   const dashboardMenuItem = [createMenuItem(dashboardCategory)];
   const assetsMenuItem = [createMenuItem(assetsCategory)];
   const workflowMenuItems = workflowCategories.map(createMenuItem);
+  const trashMenuItem = [createMenuItem(trashCategory)];
 
   return (
     <div style={{ 
@@ -307,6 +311,41 @@ export function Sidebar() {
             background: 'transparent',
             border: 'none',
             flex: 1
+          }}
+          theme={isDark ? "dark" : "light"}
+          className={!isDark ? 'ant-layout-sider-light' : ''}
+        />
+
+        {/* 分隔线 */}
+        <div style={{
+          height: '1px',
+          margin: sidebarCollapsed ? '8px 12px' : '8px 16px',
+          background: 'var(--border-color)',
+          flexShrink: 0
+        }} />
+
+        {/* 垃圾筒 */}
+        {!sidebarCollapsed && (
+          <div style={{
+            padding: '8px 16px 4px',
+            fontSize: '12px',
+            color: 'var(--text-secondary)',
+            fontWeight: 500
+          }}>
+            垃圾筒
+          </div>
+        )}
+        
+        <Menu
+          mode="inline"
+          selectedKeys={[currentCategory]}
+          items={trashMenuItem}
+          onClick={({ key }) => setCurrentCategory(key)}
+          inlineCollapsed={sidebarCollapsed}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            paddingBottom: '8px'
           }}
           theme={isDark ? "dark" : "light"}
           className={!isDark ? 'ant-layout-sider-light' : ''}
