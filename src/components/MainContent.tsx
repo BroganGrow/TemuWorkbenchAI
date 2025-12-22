@@ -1538,10 +1538,10 @@ export function MainContent({ panelId }: MainContentProps = {}) {
       })() ? (
         <div 
           style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}
-          onDragEnter={(e) => selectedFolder && handleDragEnter(e, selectedFolder)}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={(e) => selectedFolder && handleDrop(e, selectedFolder)}
+          onDragEnter={(e) => !isStyleLibrary && selectedFolder && handleDragEnter(e, selectedFolder)}
+          onDragOver={(e) => !isStyleLibrary && handleDragOver(e)}
+          onDragLeave={(e) => !isStyleLibrary && handleDragLeave(e)}
+          onDrop={(e) => !isStyleLibrary && selectedFolder && handleDrop(e, selectedFolder)}
         >
           {/* 样式库横向菜单 */}
           {isStyleLibrary && (
@@ -1590,12 +1590,12 @@ export function MainContent({ panelId }: MainContentProps = {}) {
             }
             styles={{ 
               body: { 
-                background: dragOverFolder === selectedFolder 
+                background: (!isStyleLibrary && dragOverFolder === selectedFolder)
                   ? 'rgba(253, 122, 69, 0.08)' 
                   : 'var(--card-bg)',
                 overflow: 'auto',
                 height: '100%',
-                border: dragOverFolder === selectedFolder 
+                border: (!isStyleLibrary && dragOverFolder === selectedFolder)
                   ? '2px dashed #fd7a45' 
                   : 'none',
                 transition: 'all 0.3s'
@@ -1623,7 +1623,7 @@ export function MainContent({ panelId }: MainContentProps = {}) {
               height: '100%', 
               display: 'flex', 
               flexDirection: 'column',
-              border: dragOverFolder === selectedFolder 
+              border: (!isStyleLibrary && dragOverFolder === selectedFolder)
                 ? '2px dashed #fd7a45' 
                 : '1px solid var(--border-color)'
             }}
