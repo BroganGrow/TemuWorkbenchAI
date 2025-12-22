@@ -98,6 +98,10 @@ declare global {
       
       // 窗口设置API
       updateWindowSettings: (settings: { widthPercent?: number; heightPercent?: number; minWidthPercent?: number; minHeightPercent?: number }) => Promise<{ success: boolean; error?: string }>;
+      
+      // 窗口管理API
+      closeWindow: (windowId: number) => Promise<{ success: boolean }>;
+      getCurrentWindowId: () => Promise<number>;
     };
   }
 }

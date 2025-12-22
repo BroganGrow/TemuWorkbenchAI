@@ -236,17 +236,31 @@ function createTray() {
   });
 }
 
+// 关闭指定窗口
+function closeWindow(windowId: number) {
+  const windowToClose = Array.from(windows).find(win => win.id === windowId);
+  if (windowToClose && !windowToClose.isDestroyed()) {
+    // 设置退出标志，允许窗口真正关闭
+    (app as any).isQuitting = true;
+    windowToClose.destroy();
+    (app as any).isQuitting = false;
+    // 更新托盘菜单
+    updateTrayMenu();
+  }
+}
+
 // 更新托盘菜单
 function updateTrayMenu() {
   if (!tray) return;
   
   const template: Electron.MenuItemConstructorOptions[] = [
     {
-      label: '显示窗口',
+      label: '显示所有窗口',
       click: () => {
         showAllWindows();
       }
     },
+    { type: 'separator' },
     {
       label: '新建窗口',
       click: () => {
@@ -259,15 +273,55 @@ function updateTrayMenu() {
         createWindow(false);
       }
     },
-    { type: 'separator' },
-    {
-      label: '退出',
-      click: () => {
-        (app as any).isQuitting = true;
-        app.quit();
-      }
-    }
   ];
+  
+  // 如果有多个窗口，显示窗口列表
+  if (windows.size > 1) {
+    template.push({ type: 'separator' });
+    template.push({
+      label: '窗口列表',
+      enabled: false
+    });
+    
+    // 为每个窗口添加菜单项
+    windows.forEach((win) => {
+      if (!win.isDestroyed()) {
+        const windowTitle = win.getTitle() || `窗口 ${win.id}`;
+        template.push({
+          label: windowTitle,
+          submenu: [
+            {
+              label: '显示',
+              click: () => {
+                if (!win.isDestroyed()) {
+                  win.show();
+                  if (win.isMinimized()) {
+                    win.restore();
+                  }
+                  win.focus();
+                }
+              }
+            },
+            {
+              label: '关闭',
+              click: () => {
+                closeWindow(win.id);
+              }
+            }
+          ]
+        });
+      }
+    });
+  }
+  
+  template.push({ type: 'separator' });
+  template.push({
+    label: '退出',
+    click: () => {
+      (app as any).isQuitting = true;
+      app.quit();
+    }
+  });
   
   const contextMenu = Menu.buildFromTemplate(template);
   tray.setContextMenu(contextMenu);
@@ -361,6 +415,18 @@ ipcMain.handle('create-new-window', () => {
 ipcMain.handle('create-new-window-merged', () => {
   const newWindow = createWindow(false);
   return { success: true, windowId: newWindow.id };
+});
+
+// IPC: 关闭指定窗口
+ipcMain.handle('close-window', (_event, windowId: number) => {
+  closeWindow(windowId);
+  return { success: true };
+});
+
+// IPC: 获取当前窗口 ID（通过 webContents 获取）
+ipcMain.handle('get-current-window-id', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  return win ? win.id : 0;
 });
 
 // IPC: 更新窗口设置（保存到文件，供下次创建窗口时使用）

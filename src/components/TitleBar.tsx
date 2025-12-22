@@ -138,6 +138,23 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                 },
                 { type: 'divider' },
                 {
+                  key: 'close-window',
+                  label: '关闭窗口',
+                  icon: <CloseOutlined />,
+                  title: '真正关闭当前窗口（而不是隐藏到托盘）',
+                  onClick: async () => {
+                    if (window.electronAPI?.getCurrentWindowId && window.electronAPI?.closeWindow) {
+                      try {
+                        const windowId = await window.electronAPI.getCurrentWindowId();
+                        await window.electronAPI.closeWindow(windowId);
+                      } catch (error) {
+                        console.error('关闭窗口失败:', error);
+                      }
+                    }
+                  }
+                },
+                { type: 'divider' },
+                {
                   key: 'open-folder',
                   label: '打开文件夹',
                   icon: <FolderOpenOutlined />,
