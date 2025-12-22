@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, nativeImage, Tray, Menu } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
@@ -25,6 +25,8 @@ const isDev = process.env.NODE_ENV !== 'production';
 const windows = new Set<BrowserWindow>();
 // 窗口计数器，用于生成唯一的 appUserModelId
 let windowCounter = 0;
+// 系统托盘
+let tray: Tray | null = null;
 
 // 创建新窗口
 // separateInTaskbar: 是否在任务栏中独立显示（不合并），默认为 true
@@ -107,9 +109,25 @@ function createWindow(separateInTaskbar: boolean = true) {
     newWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
-  // 窗口关闭时从集合中移除
+  // 窗口关闭时隐藏到托盘，而不是真正关闭
+  newWindow.on('close', (event) => {
+    // 如果不是退出应用，则隐藏窗口到托盘
+    if (!app.isQuitting) {
+      event.preventDefault();
+      newWindow.hide();
+      // 更新托盘菜单
+      updateTrayMenu();
+    } else {
+      // 真正关闭窗口
+      windows.delete(newWindow);
+    }
+  });
+
+  // 窗口关闭后从集合中移除
   newWindow.on('closed', () => {
     windows.delete(newWindow);
+    // 更新托盘菜单
+    updateTrayMenu();
   });
 
   // 将新窗口添加到集合中
@@ -149,8 +167,96 @@ function createWindow(separateInTaskbar: boolean = true) {
   return newWindow;
 }
 
+// 创建系统托盘
+function createTray() {
+  // 设置托盘图标
+  let trayIcon;
+  const iconPath = path.join(__dirname, '../build/icon.png');
+  const iconSvgPath = path.join(__dirname, '../build/icon.svg');
+  
+  // 优先使用 PNG，如果不存在则使用 SVG
+  if (fs.existsSync(iconPath)) {
+    trayIcon = nativeImage.createFromPath(iconPath);
+  } else if (fs.existsSync(iconSvgPath)) {
+    const svgContent = fs.readFileSync(iconSvgPath, 'utf-8');
+    trayIcon = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svgContent).toString('base64')}`);
+  } else {
+    // 如果没有图标，创建一个简单的图标
+    trayIcon = nativeImage.createEmpty();
+  }
+  
+  // 调整图标大小（系统托盘通常需要 16x16 或 32x32）
+  if (trayIcon && !trayIcon.isEmpty()) {
+    trayIcon = trayIcon.resize({ width: 16, height: 16 });
+  }
+  
+  tray = new Tray(trayIcon);
+  tray.setToolTip('Temu工作台');
+  
+  // 更新托盘菜单
+  updateTrayMenu();
+  
+  // 双击托盘图标显示窗口
+  tray.on('double-click', () => {
+    showAllWindows();
+  });
+}
+
+// 更新托盘菜单
+function updateTrayMenu() {
+  if (!tray) return;
+  
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: '显示窗口',
+      click: () => {
+        showAllWindows();
+      }
+    },
+    {
+      label: '新建窗口',
+      click: () => {
+        createWindow(true);
+      }
+    },
+    {
+      label: '新建窗口（合并）',
+      click: () => {
+        createWindow(false);
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
+      }
+    }
+  ];
+  
+  const contextMenu = Menu.buildFromTemplate(template);
+  tray.setContextMenu(contextMenu);
+}
+
+// 显示所有窗口
+function showAllWindows() {
+  windows.forEach(window => {
+    if (window && !window.isDestroyed()) {
+      window.show();
+      if (window.isMinimized()) {
+        window.restore();
+      }
+      window.focus();
+    }
+  });
+}
+
 // 应用准备就绪
 app.whenReady().then(() => {
+  // 初始化退出标志
+  (app as any).isQuitting = false;
+  
   // 设置应用的基础 appUserModelId（Windows）
   // 这确保应用有正确的图标显示
   if (process.platform === 'win32') {
@@ -189,19 +295,26 @@ app.whenReady().then(() => {
   });
   
   createWindow();
+  
+  // 创建系统托盘
+  createTray();
 
   app.on('activate', () => {
     if (windows.size === 0) {
       createWindow();
+    } else {
+      // 如果有窗口但都隐藏了，显示它们
+      showAllWindows();
     }
   });
 });
 
-// 所有窗口关闭时退出应用（macOS除外）
+// 所有窗口关闭时，不退出应用，而是隐藏到托盘
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // 不退出应用，让窗口隐藏到托盘
+  // 只有在 macOS 上才退出（因为 macOS 有 Dock）
+  // 但我们已经有了托盘，所以也不退出
+  // 用户可以通过托盘菜单退出
 });
 
 // IPC: 创建新窗口（独立显示）
@@ -216,9 +329,13 @@ ipcMain.handle('create-new-window-merged', () => {
   return { success: true, windowId: newWindow.id };
 });
 
-// 应用退出时清理全局快捷键
+// 应用退出时清理全局快捷键和托盘
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
 });
 
 // IPC通信处理示例
