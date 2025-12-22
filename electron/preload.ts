@@ -63,6 +63,9 @@ export interface ElectronAPI {
   // 产品管理 API
   getNextSerialNumber: (rootPath: string, productType: string) => Promise<number>;
   updateMenuPath: (folderPath: string | null) => void;
+  
+  // 窗口管理 API
+  createNewWindow: () => Promise<{ success: boolean; windowId?: number }>;
 }
 
 // 通过contextBridge暴露API到渲染进程
@@ -104,7 +107,10 @@ const electronAPI: ElectronAPI = {
   
   // 产品管理 API
   getNextSerialNumber: (rootPath: string, productType: string) => ipcRenderer.invoke('get-next-serial-number', rootPath, productType),
-  updateMenuPath: (folderPath: string | null) => ipcRenderer.send('update-menu-path', folderPath)
+  updateMenuPath: (folderPath: string | null) => ipcRenderer.send('update-menu-path', folderPath),
+  
+  // 窗口管理 API
+  createNewWindow: () => ipcRenderer.invoke('create-new-window')
 };
 
 // 暴露到window对象

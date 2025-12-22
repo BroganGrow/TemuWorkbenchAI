@@ -91,6 +91,9 @@ declare global {
       // 产品管理API
       getNextSerialNumber: (rootPath: string, productType: string) => Promise<number>;
       updateMenuPath: (folderPath: string | null) => void;
+      
+      // 窗口管理API
+      createNewWindow: () => Promise<{ success: boolean; windowId?: number }>;
     };
   }
 }

@@ -9,7 +9,8 @@ import {
   BgColorsOutlined,
   CheckOutlined,
   ReloadOutlined,
-  SettingOutlined
+  SettingOutlined,
+  PlusOutlined
 } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 import { Button, Tooltip } from 'antd';
@@ -105,6 +106,21 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               key: 'file', 
               label: '文件',
               children: [
+                {
+                  key: 'new-window',
+                  label: '新建窗口',
+                  icon: <PlusOutlined />,
+                  onClick: async () => {
+                    if (window.electronAPI?.createNewWindow) {
+                      try {
+                        await window.electronAPI.createNewWindow();
+                      } catch (error) {
+                        console.error('创建新窗口失败:', error);
+                      }
+                    }
+                  }
+                },
+                { type: 'divider' },
                 {
                   key: 'open-folder',
                   label: '打开文件夹',

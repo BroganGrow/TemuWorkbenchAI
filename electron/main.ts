@@ -21,9 +21,10 @@ const __dirname = path.dirname(__filename);
 // 开发环境判断
 const isDev = process.env.NODE_ENV !== 'production';
 
-let mainWindow: BrowserWindow | null = null;
+// 窗口管理：使用 Set 存储所有窗口
+const windows = new Set<BrowserWindow>();
 
-// 创建主窗口
+// 创建新窗口
 function createWindow() {
   // 设置应用图标
   let appIcon;
@@ -39,7 +40,7 @@ function createWindow() {
     appIcon = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svgContent).toString('base64')}`);
   }
 
-  mainWindow = new BrowserWindow({
+  const newWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1200,
@@ -60,32 +61,32 @@ function createWindow() {
   });
 
   // 窗口准备好后显示
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
+  newWindow.once('ready-to-show', () => {
+    newWindow.show();
     console.log('Window ready');
     console.log('Preload path:', path.join(__dirname, 'preload.cjs'));
   });
 
   // 监听 preload 脚本加载
-  mainWindow.webContents.on('did-finish-load', () => {
+  newWindow.webContents.on('did-finish-load', () => {
     console.log('Page loaded successfully');
     // 测试 API 是否可用
-    mainWindow?.webContents.executeJavaScript('typeof window.electronAPI')
+    newWindow.webContents.executeJavaScript('typeof window.electronAPI')
       .then(result => console.log('window.electronAPI type:', result))
       .catch(err => console.error('Failed to check API:', err));
   });
 
-  mainWindow.webContents.on('preload-error', (event, preloadPath, error) => {
+  newWindow.webContents.on('preload-error', (event, preloadPath, error) => {
     console.error('Preload script load failed:', preloadPath, error);
   });
 
   // 注册开发者工具快捷键
-  mainWindow.webContents.on('before-input-event', (event, input) => {
+  newWindow.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'F12' || (input.control && input.shift && input.key === 'I')) {
-      if (mainWindow?.webContents.isDevToolsOpened()) {
-        mainWindow?.webContents.closeDevTools();
+      if (newWindow.webContents.isDevToolsOpened()) {
+        newWindow.webContents.closeDevTools();
       } else {
-        mainWindow?.webContents.openDevTools();
+        newWindow.webContents.openDevTools();
       }
       event.preventDefault();
     }
@@ -93,16 +94,22 @@ function createWindow() {
 
   // 加载应用
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
+    newWindow.loadURL('http://localhost:5173');
     // 开发环境不自动打开调试工具，需要时按 F12 打开
-    // mainWindow.webContents.openDevTools();
+    // newWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    newWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
+  // 窗口关闭时从集合中移除
+  newWindow.on('closed', () => {
+    windows.delete(newWindow);
   });
+
+  // 将新窗口添加到集合中
+  windows.add(newWindow);
+  
+  return newWindow;
 }
 
 // 应用准备就绪
@@ -132,11 +139,16 @@ app.whenReady().then(() => {
       }
     }
   });
+
+  // 注册 Ctrl+N / Cmd+N 创建新窗口
+  globalShortcut.register('CommandOrControl+N', () => {
+    createWindow();
+  });
   
   createWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    if (windows.size === 0) {
       createWindow();
     }
   });
@@ -147,6 +159,12 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// IPC: 创建新窗口
+ipcMain.handle('create-new-window', () => {
+  const newWindow = createWindow();
+  return { success: true, windowId: newWindow.id };
 });
 
 // 应用退出时清理全局快捷键
