@@ -579,7 +579,7 @@ export function MainContent({ panelId }: MainContentProps = {}) {
 
   const getFileIcon = (fileName: string) => {
     const ext = fileName.split('.').pop()?.toLowerCase();
-    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico'];
     const textExts = ['txt', 'md', 'json', 'xml', 'html', 'css', 'js', 'ts', 'tsx'];
     
     if (imageExts.includes(ext || '')) {
@@ -595,7 +595,7 @@ export function MainContent({ panelId }: MainContentProps = {}) {
 
   const isImageFile = (fileName: string) => {
     const ext = fileName.split('.').pop()?.toLowerCase();
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext || '');
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'avif', 'ico'].includes(ext || '');
   };
 
   const isTextFile = (fileName: string) => {

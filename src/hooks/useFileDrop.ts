@@ -4,7 +4,7 @@ import type { DroppedFile } from '../types';
 /**
  * 支持的图片文件扩展名
  */
-const SUPPORTED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+const SUPPORTED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico'];
 
 /**
  * 文件拖放Hook
