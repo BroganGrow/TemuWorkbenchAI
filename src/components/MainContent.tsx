@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
-  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input, Dropdown, Popconfirm, Checkbox, Select, Tabs 
+  Empty, Card, Tag, Tooltip, Button, List, Image, Modal, Spin, message, Space, Input, Dropdown, Popconfirm, Checkbox, Select, Tabs, Slider 
 } from 'antd';
 
 const { TextArea } = Input;
@@ -65,6 +65,8 @@ export function MainContent({ panelId }: MainContentProps = {}) {
   const { 
     products,
     viewMode,
+    imageSize,
+    setImageSize,
     currentCategory,
     aiTitlePrompt,
     activeTabId,
@@ -169,6 +171,8 @@ export function MainContent({ panelId }: MainContentProps = {}) {
   const [fileResolutions, setFileResolutions] = useState<Record<string, { width: number; height: number }>>({});
   // SVG 文件的 data URL 缓存
   const [svgDataUrls, setSvgDataUrls] = useState<Record<string, string>>({});
+  // 图片加载失败的记录（用于列表视图回退到图标）
+  const [imageLoadErrors, setImageLoadErrors] = useState<Set<string>>(new Set());
 
   // 工具条位置：'corner' 右下角垂直 | 'center' 底部中央水平（从 localStorage 读取记忆）
   const [toolbarPosition, setToolbarPosition] = useState<'corner' | 'center'>(() => {
@@ -252,9 +256,10 @@ export function MainContent({ panelId }: MainContentProps = {}) {
   // 加载文件列表
   useEffect(() => {
     const loadFiles = async () => {
-      // 切换文件夹时清空分辨率缓存、SVG 缓存和选中状态
+      // 切换文件夹时清空分辨率缓存、SVG 缓存、图片加载错误记录和选中状态
       setFileResolutions({});
       setSvgDataUrls({});
+      setImageLoadErrors(new Set());
       setSelectedFileIndices([]);
       setLastSelectedIndex(-1);
       
@@ -1657,21 +1662,83 @@ export function MainContent({ panelId }: MainContentProps = {}) {
           
           <Card
             title={
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>
-                  {isStyleLibrary
-                    ? (styleLibrarySubFolder === '01_sku_pic' ? 'SKU规格图' : 
-                       styleLibrarySubFolder === '02_product_size_pic' ? '尺寸图' : 
-                       styleLibrarySubFolder === '03_scene_pic' ? '场景图' : '文件列表')
-                    : selectedProductData && selectedFolder
-                    ? (folderNames[selectedFolder] || selectedFolder)
-                    : (selectedProduct?.split('/').pop() || '文件列表')
-                  }
-                </span>
-                {selectedFolder && dragOverFolder === selectedFolder && (
-                  <Tag color="orange" style={{ margin: 0 }}>
-                    拖放文件到这里
-                  </Tag>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>
+                    {isStyleLibrary
+                      ? (styleLibrarySubFolder === '01_sku_pic' ? 'SKU规格图' : 
+                         styleLibrarySubFolder === '02_product_size_pic' ? '尺寸图' : 
+                         styleLibrarySubFolder === '03_scene_pic' ? '场景图' : '文件列表')
+                      : selectedProductData && selectedFolder
+                      ? (folderNames[selectedFolder] || selectedFolder)
+                      : (selectedProduct?.split('/').pop() || '文件列表')
+                    }
+                  </span>
+                  {selectedFolder && dragOverFolder === selectedFolder && (
+                    <Tag color="orange" style={{ margin: 0 }}>
+                      拖放文件到这里
+                    </Tag>
+                  )}
+                </div>
+                {viewMode === 'grid' && (
+                  <div 
+                    style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '200px' }}
+                    onWheel={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const currentValue = imageSize === 'xs' ? 1 : imageSize === 'small' ? 2 : imageSize === 'medium' ? 3 : imageSize === 'large' ? 4 : 5;
+                      const delta = e.deltaY > 0 ? -1 : 1;
+                      const newValue = Math.max(1, Math.min(5, currentValue + delta));
+                      const sizeMap: Record<number, 'xs' | 'small' | 'medium' | 'large' | 'xl'> = {
+                        1: 'xs',
+                        2: 'small',
+                        3: 'medium',
+                        4: 'large',
+                        5: 'xl'
+                      };
+                      const newSize = sizeMap[newValue];
+                      if (newSize) {
+                        setImageSize(newSize);
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>图片大小:</span>
+                    <Slider
+                      min={1}
+                      max={5}
+                      step={1}
+                      value={imageSize === 'xs' ? 1 : imageSize === 'small' ? 2 : imageSize === 'medium' ? 3 : imageSize === 'large' ? 4 : 5}
+                      onChange={(value) => {
+                        if (value === undefined || value === null) return;
+                        const sizeMap: Record<number, 'xs' | 'small' | 'medium' | 'large' | 'xl'> = {
+                          1: 'xs',
+                          2: 'small',
+                          3: 'medium',
+                          4: 'large',
+                          5: 'xl'
+                        };
+                        const newSize = sizeMap[value];
+                        if (newSize) {
+                          setImageSize(newSize);
+                        }
+                      }}
+                      style={{ flex: 1, margin: 0 }}
+                      tooltip={{ formatter: (value) => {
+                        if (value === undefined || value === null) return '';
+                        const sizeMap: Record<number, string> = {
+                          1: '极小',
+                          2: '小',
+                          3: '中',
+                          4: '大',
+                          5: '极大'
+                        };
+                        return sizeMap[value] || '';
+                      }}}
+                    />
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', minWidth: '30px' }}>
+                      {imageSize === 'xs' ? '极小' : imageSize === 'small' ? '小' : imageSize === 'medium' ? '中' : imageSize === 'large' ? '大' : '极大'}
+                    </span>
+                  </div>
                 )}
               </div>
             }
@@ -1773,7 +1840,51 @@ export function MainContent({ panelId }: MainContentProps = {}) {
                       onDoubleClick={() => handlePreview(file, index)}
                     >
                       <List.Item.Meta
-                        avatar={getFileIcon(file.name)}
+                        avatar={
+                          isImageFile(file.name) && !imageLoadErrors.has(file.path) ? (
+                            <div style={{
+                              width: '64px',
+                              height: '64px',
+                              background: 'var(--bg-tertiary)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              overflow: 'hidden',
+                              borderRadius: '4px',
+                              flexShrink: 0
+                            }}>
+                              {file.name.toLowerCase().endsWith('.svg') && svgDataUrls[file.path] ? (
+                                <img
+                                  src={svgDataUrls[file.path]}
+                                  alt={file.name}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'contain'
+                                  }}
+                                  onError={() => {
+                                    setImageLoadErrors(prev => new Set(prev).add(file.path));
+                                  }}
+                                />
+                              ) : (
+                                <img
+                                  src={`file://${file.path}`}
+                                  alt={file.name}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'contain'
+                                  }}
+                                  onError={() => {
+                                    setImageLoadErrors(prev => new Set(prev).add(file.path));
+                                  }}
+                                />
+                              )}
+                            </div>
+                          ) : (
+                            getFileIcon(file.name)
+                          )
+                        }
                         title={
                           <div style={{ 
                             color: 'var(--text-primary)',
@@ -1806,7 +1917,13 @@ export function MainContent({ panelId }: MainContentProps = {}) {
               // 网格视图
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                gridTemplateColumns: `repeat(auto-fill, minmax(${
+                  imageSize === 'xs' ? '100px' : 
+                  imageSize === 'small' ? '140px' : 
+                  imageSize === 'medium' ? '180px' : 
+                  imageSize === 'large' ? '220px' : 
+                  '260px'
+                }, 1fr))`,
                 gap: '16px'
               }}>
                 {files.map((file, index) => (
@@ -1829,7 +1946,11 @@ export function MainContent({ panelId }: MainContentProps = {}) {
                       cover={
                         isImageFile(file.name) ? (
                           <div style={{
-                            height: '150px',
+                            height: imageSize === 'xs' ? '80px' : 
+                                    imageSize === 'small' ? '120px' : 
+                                    imageSize === 'medium' ? '150px' : 
+                                    imageSize === 'large' ? '180px' : 
+                                    '210px',
                             background: 'var(--bg-tertiary)',
                             display: 'flex',
                             alignItems: 'center',
@@ -1866,7 +1987,11 @@ export function MainContent({ panelId }: MainContentProps = {}) {
                           </div>
                         ) : (
                           <div style={{
-                            height: '150px',
+                            height: imageSize === 'xs' ? '80px' : 
+                                    imageSize === 'small' ? '120px' : 
+                                    imageSize === 'medium' ? '150px' : 
+                                    imageSize === 'large' ? '180px' : 
+                                    '210px',
                             background: 'var(--bg-tertiary)',
                             display: 'flex',
                             alignItems: 'center',

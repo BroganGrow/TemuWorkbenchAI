@@ -165,6 +165,8 @@ export interface AppState {
   sidebarCollapsed: boolean;
   // 视图模式
   viewMode: 'list' | 'grid';
+  // 图片大小（仅网格视图，5个档位）
+  imageSize: 'xs' | 'small' | 'medium' | 'large' | 'xl';
   // 搜索关键词
   searchKeyword: string;
   // 浏览历史
@@ -203,6 +205,7 @@ export interface AppState {
   updateProduct: (productId: string, updates: Partial<ProductNode>) => void;
   toggleSidebar: () => void;
   setViewMode: (mode: 'list' | 'grid') => void;
+  setImageSize: (size: 'xs' | 'small' | 'medium' | 'large' | 'xl') => void;
   setSearchKeyword: (keyword: string) => void;
   triggerRefresh: () => void;
   // AI 模型 Actions
@@ -263,6 +266,7 @@ export const useAppStore = create<AppState>()(
       products: [],
       sidebarCollapsed: false,
       viewMode: 'list',
+      imageSize: 'medium',
       searchKeyword: '',
       history: [],
       historyIndex: -1,
@@ -432,6 +436,8 @@ export const useAppStore = create<AppState>()(
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       
       setViewMode: (mode) => set({ viewMode: mode }),
+      
+      setImageSize: (size) => set({ imageSize: size }),
       
       setSearchKeyword: (keyword) => set({ searchKeyword: keyword }),
 
@@ -872,6 +878,7 @@ export const useAppStore = create<AppState>()(
         rootPath: state.rootPath,
         sidebarCollapsed: state.sidebarCollapsed,
         viewMode: state.viewMode,
+        imageSize: state.imageSize,
         aiModels: state.aiModels,
         aiTitlePrompt: state.aiTitlePrompt,
         selectedAIModelId: state.selectedAIModelId,
