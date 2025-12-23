@@ -163,10 +163,10 @@ export function FileTree({ onDrop }: FileTreeProps) {
       }
       
       return {
-        key: folder.path,
+      key: folder.path,
         title: displayName,
-        icon: folder.isDirectory ? <FolderOutlined /> : <FileOutlined />,
-        isLeaf: !folder.isDirectory
+      icon: folder.isDirectory ? <FolderOutlined /> : <FileOutlined />,
+      isLeaf: !folder.isDirectory
       };
     });
   }, [normalFolders, isWorkflowCategory]);

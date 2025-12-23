@@ -95,7 +95,11 @@ function createWindow(separateInTaskbar: boolean = true): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      webSecurity: false  // 开发环境禁用web安全检查
+      webSecurity: false,  // 开发环境禁用web安全检查
+      // 禁用 GPU 缓存以避免缓存创建错误（如果不需要 GPU 加速可以禁用）
+      // enableWebSQL: false,
+      // 使用应用级别的缓存目录，而不是窗口级别的
+      partition: 'persist:main'  // 所有窗口共享同一个 session partition
     },
     backgroundColor: '#1f1f1f',
     show: false,
@@ -349,6 +353,27 @@ app.whenReady().then(() => {
   // 这确保应用有正确的图标显示
   if (process.platform === 'win32') {
     app.setAppUserModelId('com.temuworkbench');
+    
+    // 设置统一的缓存目录，避免多窗口缓存冲突
+    // 确保所有窗口共享同一个缓存目录，而不是每个窗口创建独立的缓存
+    try {
+      const userDataPath = app.getPath('userData');
+      const cachePath = path.join(userDataPath, 'Cache');
+      const gpuCachePath = path.join(userDataPath, 'GPUCache');
+      
+      // 确保缓存目录存在且有正确的权限
+      if (!fs.existsSync(cachePath)) {
+        fs.ensureDirSync(cachePath);
+      }
+      if (!fs.existsSync(gpuCachePath)) {
+        fs.ensureDirSync(gpuCachePath);
+      }
+      
+      // 设置环境变量，让 Chromium 使用统一的缓存目录
+      process.env.CHROME_USER_DATA_DIR = userDataPath;
+    } catch (error) {
+      console.warn('设置缓存目录失败，使用默认缓存:', error);
+    }
   }
   
   // 注册IPC处理器
