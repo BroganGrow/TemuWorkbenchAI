@@ -3,7 +3,7 @@ import { BulbOutlined, BulbFilled } from '@ant-design/icons';
 import { useAppStore } from '../store/appStore';
 
 export function ThemeToggle() {
-  const { theme, toggleTheme } = useAppStore();
+  const { theme, setTheme } = useAppStore();
   const isDark = theme === 'dark';
 
   return (
@@ -20,7 +20,7 @@ export function ThemeToggle() {
       />
       <Switch
         checked={isDark}
-        onChange={toggleTheme}
+        onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
         checkedChildren="深色"
         unCheckedChildren="浅色"
       />

@@ -68,8 +68,8 @@ export const useSettingsStore = create<SettingsStore>()(
     (set, get) => ({
       settings: defaultSettings,
 
-      updateBasicSettings: (basicSettings) => {
-        set((state) => ({
+      updateBasicSettings: (basicSettings: any) => {
+        set((state: any) => ({
           settings: {
             ...state.settings,
             basic: {
@@ -80,8 +80,8 @@ export const useSettingsStore = create<SettingsStore>()(
         }));
       },
 
-      updateWindowSettings: (windowSettings) => {
-        set((state) => ({
+      updateWindowSettings: (windowSettings: any) => {
+        set((state: any) => ({
           settings: {
             ...state.settings,
             window: {
@@ -101,7 +101,7 @@ export const useSettingsStore = create<SettingsStore>()(
         return JSON.stringify(settings, null, 2);
       },
 
-      importSettings: (json) => {
+      importSettings: (json: string) => {
         try {
           const importedSettings = JSON.parse(json) as AppSettings;
           

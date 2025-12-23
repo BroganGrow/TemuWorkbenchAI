@@ -81,7 +81,6 @@ declare global {
       // 窗口控制API
       minimizeWindow: () => void;
       maximizeWindow: () => void;
-      closeWindow: () => void;
       isMaximized: () => Promise<boolean>;
       windowMinimize: () => void;
       windowMaximize: () => void;

@@ -80,13 +80,10 @@ export function ExperimentLab() {
     }
 
     setGenerating(true);
-    let loadingMessage: ReturnType<typeof message.loading> | null = null;
+    const loadingKey = 'generating-image';
     
     const updateProgress = (msg: string) => {
-      if (loadingMessage) {
-        loadingMessage();
-      }
-      loadingMessage = message.loading(msg, 0);
+      message.loading({ content: msg, key: loadingKey, duration: 0 });
     };
     
     try {
@@ -101,15 +98,11 @@ export function ExperimentLab() {
         useDomestic
       }, updateProgress);
       
-      if (loadingMessage) {
-        loadingMessage();
-      }
+      message.destroy(loadingKey);
       setGeneratedImage(imageUrl);
       message.success('图片生成成功！');
     } catch (error) {
-      if (loadingMessage) {
-        loadingMessage();
-      }
+      message.destroy(loadingKey);
       console.error('生成图片失败:', error);
       message.error(`生成失败: ${(error as Error).message}`);
     } finally {
@@ -315,7 +308,10 @@ export function ExperimentLab() {
                 {lastTaskId && !generatedImage && (
                   <Button 
                     icon={<ReloadOutlined />} 
-                    onClick={handleRetryGetResult}
+                    onClick={() => {
+                      // TODO: 实现重新获取结果的逻辑
+                      message.info('功能开发中');
+                    }}
                     loading={generating}
                     type="primary"
                   >

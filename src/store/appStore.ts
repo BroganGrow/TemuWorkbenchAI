@@ -192,7 +192,6 @@ export interface AppState {
   // AI 模型配置
   aiModels: AIModel[];
   selectedAIModelId: string | null; // 当前选择的 AI 模型 ID（用于 AI 优化功能）
-  aiTitlePrompt: string;
   promptRules: Array<{
     id: string;
     name: string;
@@ -226,6 +225,14 @@ export interface AppState {
   // AI 优化 Prompt
   aiTitlePrompt: string;
   setAITitlePrompt: (prompt: string) => void;
+  setPromptRules: (rules: Array<{
+    id: string;
+    name: string;
+    positivePrompt: string;
+    negativePrompt: string;
+    description?: string;
+    category?: string;
+  }>) => void;
 
   // 产品类型管理
   productTypes: ProductType[];
@@ -345,7 +352,14 @@ export const useAppStore = create<AppState>()(
       setAITitlePrompt: (prompt) => set({ aiTitlePrompt: prompt }),
       
       promptRules: [],
-      setPromptRules: (rules) => set({ promptRules: rules }),
+      setPromptRules: (rules: Array<{
+        id: string;
+        name: string;
+        positivePrompt: string;
+        negativePrompt: string;
+        description?: string;
+        category?: string;
+      }>) => set({ promptRules: rules }),
 
       productTypes: [
         { id: 'ST', code: 'ST', name: '贴纸' },

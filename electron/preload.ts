@@ -133,9 +133,5 @@ const electronAPI: ElectronAPI = {
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 
 // 类型声明（用于TypeScript）
-declare global {
-  interface Window {
-    electronAPI: ElectronAPI;
-  }
-}
+// 注意：类型定义在 src/types/index.ts 中，这里不重复声明
 

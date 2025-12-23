@@ -67,15 +67,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
+      // @ts-ignore - WebkitAppRegion is a valid Electron CSS property
       WebkitAppRegion: 'drag', // 使标题栏可拖动
       userSelect: 'none'
     }}>
       {/* 左侧：Logo + 菜单 */}
+      {/* @ts-ignore - WebkitAppRegion is a valid Electron CSS property */}
       <div style={{ 
         display: 'flex', 
         alignItems: 'center',
         WebkitAppRegion: 'no-drag' // 菜单区域不可拖动
-      }}>
+      } as React.CSSProperties}>
         {/* Logo */}
         <div style={{
           width: '32px',
@@ -308,12 +310,13 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       </div>
 
       {/* 右侧控制按钮 */}
+      {/* @ts-ignore - WebkitAppRegion is a valid Electron CSS property */}
       <div style={{ 
         display: 'flex', 
         alignItems: 'center',
         height: '100%',
         WebkitAppRegion: 'no-drag' // 控制按钮区域不可拖动
-      }}>
+      } as React.CSSProperties}>
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 

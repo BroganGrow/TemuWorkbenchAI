@@ -90,7 +90,7 @@ async function translateToEnglish(text: string): Promise<string> {
       // 转换为驼峰命名（首字母大写，去除空格）
       const words = translated.split(/\s+/);
       translated = words
-        .map((word) => {
+        .map((word: string) => {
           return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
         })
         .join('');
@@ -125,7 +125,7 @@ async function translateToEnglishBackup(text: string): Promise<string> {
       
       const words = translated.split(/\s+/);
       translated = words
-        .map((word) => {
+        .map((word: string) => {
           return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
         })
         .join('');
@@ -168,7 +168,7 @@ async function translateToEnglishBackup2(text: string): Promise<string> {
       
       const words = translated.split(/\s+/);
       translated = words
-        .map((word) => {
+        .map((word: string) => {
           return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
         })
         .join('');
