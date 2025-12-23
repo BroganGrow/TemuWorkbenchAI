@@ -16,7 +16,7 @@ import { NewProductDialog } from './components/NewProductDialog';
 import { WorkspaceInitDialog } from './components/WorkspaceInitDialog';
 import { TitleBar } from './components/TitleBar';
 import { AIConfigDialog } from './components/AIConfigDialog';
-import { AIPromptDialog } from './components/AIPromptDialog';
+import { PromptLibraryDialog } from './components/PromptLibraryDialog';
 import { SettingsDialog } from './components/SettingsDialog';
 import { ExperimentLab } from './components/ExperimentLab';
 import { ResizableSider } from './components/ResizableSider';
@@ -48,7 +48,7 @@ function App() {
   const [newProductDialogOpen, setNewProductDialogOpen] = useState(false);
   const [workspaceInitDialogOpen, setWorkspaceInitDialogOpen] = useState(false);
   const [aiConfigDialogOpen, setAIConfigDialogOpen] = useState(false);
-  const [aiPromptDialogOpen, setAIPromptDialogOpen] = useState(false);
+  const [promptLibraryDialogOpen, setPromptLibraryDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [experimentOpen, setExperimentOpen] = useState(false);
   const [experimentType, setExperimentType] = useState<string>('');
@@ -317,7 +317,7 @@ function App() {
         onCloseFolder={handleCloseFolder}
         onRefresh={handleRefresh}
         onOpenAIConfig={() => setAIConfigDialogOpen(true)}
-        onOpenAIPrompt={() => setAIPromptDialogOpen(true)}
+        onOpenPromptLibrary={() => setPromptLibraryDialogOpen(true)}
         onOpenSettings={() => setSettingsDialogOpen(true)}
       />
 
@@ -454,10 +454,10 @@ function App() {
         onCancel={() => setAIConfigDialogOpen(false)}
       />
 
-      {/* AI 提示词配置对话框 */}
-      <AIPromptDialog
-        open={aiPromptDialogOpen}
-        onCancel={() => setAIPromptDialogOpen(false)}
+      {/* 提示词规则库对话框 */}
+      <PromptLibraryDialog
+        open={promptLibraryDialogOpen}
+        onCancel={() => setPromptLibraryDialogOpen(false)}
       />
 
       {/* 设置对话框 */}

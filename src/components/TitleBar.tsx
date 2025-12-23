@@ -22,7 +22,7 @@ interface TitleBarProps {
   onCloseFolder: () => void;
   onRefresh: () => void;
   onOpenAIConfig: () => void;
-  onOpenAIPrompt: () => void;
+  onOpenPromptLibrary: () => void;
   onOpenSettings: () => void;
 }
 
@@ -33,7 +33,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onCloseFolder,
   onRefresh,
   onOpenAIConfig,
-  onOpenAIPrompt,
+  onOpenPromptLibrary,
   onOpenSettings
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -197,9 +197,9 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                   onClick: onOpenAIConfig
                 },
                 {
-                  key: 'prompt-config',
-                  label: '标题优化规则',
-                  onClick: onOpenAIPrompt
+                  key: 'prompt-library',
+                  label: '提示词规则库',
+                  onClick: onOpenPromptLibrary
                 }
               ]
             },
