@@ -199,7 +199,7 @@ export interface AppState {
     positivePrompt: string;
     negativePrompt: string;
     description?: string;
-    isDefault?: boolean; // 是否为默认规则（用于标题优化）
+    category?: string; // 分类：product-title, main-image, sku-image, size-image, comparison-image, scene-image
   }>;
 
   // Actions

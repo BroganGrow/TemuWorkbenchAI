@@ -1,10 +1,38 @@
-import { Modal, Input, Button, Typography, Space, List, Tabs, message, Tag, Popover, Empty } from 'antd';
+import { Modal, Input, Button, Typography, Space, List, message, Tag, Popover, Empty, Select } from 'antd';
 import { useAppStore } from '../store/appStore';
-import { useState, useEffect, useRef } from 'react';
-import { FileTextOutlined, PlusOutlined, DeleteOutlined, EditOutlined, StarOutlined, StarFilled, QuestionCircleOutlined } from '@ant-design/icons';
+import { useState, useEffect, useCallback } from 'react';
+import { FileTextOutlined, PlusOutlined, DeleteOutlined, EditOutlined, QuestionCircleOutlined, DragOutlined } from '@ant-design/icons';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const { TextArea } = Input;
 const { Text } = Typography;
+const { Option } = Select;
+
+// 固定的6个分类
+const FIXED_CATEGORIES = [
+  { id: 'product-title', name: '产品标题' },
+  { id: 'main-image', name: '主图' },
+  { id: 'sku-image', name: 'SKU图' },
+  { id: 'size-image', name: '尺寸图' },
+  { id: 'comparison-image', name: '对比图' },
+  { id: 'scene-image', name: '场景图' }
+] as const;
 
 export interface PromptRule {
   id: string;
@@ -12,7 +40,7 @@ export interface PromptRule {
   positivePrompt: string; // 正向提示词
   negativePrompt: string; // 反向提示词
   description?: string;
-  isDefault?: boolean; // 是否为默认规则（用于标题优化）
+  category?: string; // 分类：product-title, main-image, sku-image, size-image, comparison-image, scene-image
 }
 
 interface PromptLibraryDialogProps {
@@ -20,55 +48,198 @@ interface PromptLibraryDialogProps {
   onCancel: () => void;
 }
 
-const DEFAULT_POSITIVE_PROMPT = `请优化以下 Temu 产品标题，使其更具吸引力，包含高搜索量的关键词，符合 SEO 标准，且通顺自然。
-请直接返回优化后的标题（包含中文和英文，用括号隔开，格式如：中文标题 (English Title)），不要包含其他解释或引导语。
+const DEFAULT_POSITIVE_PROMPT = '';
 
-原标题：{title}`;
+const DEFAULT_NEGATIVE_PROMPT = '';
 
-const DEFAULT_NEGATIVE_PROMPT = `不要使用过于夸张的词汇，不要包含特殊符号，不要超过合理的长度。`;
+interface SortableRuleItemProps {
+  rule: PromptRule;
+  editingRule: PromptRule | null;
+  onEdit: (rule: PromptRule) => void;
+  onDelete: (ruleId: string) => void;
+  isFixedRule: (ruleId: string) => boolean;
+  categories: typeof FIXED_CATEGORIES;
+  onCategoryChange: (ruleId: string, category: string) => void;
+}
+
+function SortableRuleItem({ 
+  rule, 
+  editingRule, 
+  onEdit, 
+  onDelete, 
+  isFixedRule,
+  categories,
+  onCategoryChange
+}: SortableRuleItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: rule.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <List.Item
+        style={{
+          padding: '12px',
+          cursor: 'pointer',
+          backgroundColor: editingRule?.id === rule.id ? 'var(--bg-hover)' : 'transparent',
+          borderRadius: '6px',
+          marginBottom: '8px',
+          border: editingRule?.id === rule.id ? '1px solid var(--color-primary)' : '1px solid transparent',
+          transition: 'all 0.2s'
+        }}
+        onClick={() => onEdit(rule)}
+        actions={[
+          <Button
+            key="delete"
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            size="small"
+            disabled={isFixedRule(rule.id)}
+            title={isFixedRule(rule.id) ? '不能删除固定规则' : '删除'}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(rule.id);
+            }}
+          />
+        ]}
+      >
+        <List.Item.Meta
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                {...attributes}
+                {...listeners}
+                style={{ cursor: 'grab', padding: '4px', display: 'flex', alignItems: 'center' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DragOutlined style={{ color: 'var(--text-secondary)' }} />
+              </div>
+              <Text strong>{rule.name}</Text>
+              {rule.category && (
+                <Tag color="blue">
+                  {categories.find(c => c.id === rule.category)?.name || rule.category}
+                </Tag>
+              )}
+            </div>
+          }
+        />
+      </List.Item>
+    </div>
+  );
+}
 
 export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps) {
   const { promptRules, setPromptRules, aiTitlePrompt, setAITitlePrompt } = useAppStore();
   const [rules, setRules] = useState<PromptRule[]>([]);
   const [editingRule, setEditingRule] = useState<PromptRule | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [defaultRuleId, setDefaultRuleId] = useState<string | null>(null);
-  // 初始化规则库：如果为空，创建一个默认的"标题优化"规则
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // 初始化规则库：固定支持6个规则
   useEffect(() => {
     if (open) {
       let initialRules = [...(promptRules || [])];
       
-      // 如果规则库为空，或者没有默认规则，创建一个默认的"标题优化"规则
-      if (initialRules.length === 0) {
-        const defaultRule: PromptRule = {
-          id: 'default-title-optimization',
-          name: '标题优化',
-          description: '默认的标题优化规则，用于 AI 优化产品标题',
+      // 定义固定的6个规则
+      const fixedRules: PromptRule[] = [
+        {
+          id: 'main-image',
+          name: '主图',
+          description: '用于生成或优化产品主图',
+          positivePrompt: DEFAULT_POSITIVE_PROMPT,
+          negativePrompt: DEFAULT_NEGATIVE_PROMPT,
+          category: undefined
+        },
+        {
+          id: 'sku-image',
+          name: 'SKU图',
+          description: '用于生成或优化SKU规格图',
+          positivePrompt: DEFAULT_POSITIVE_PROMPT,
+          negativePrompt: DEFAULT_NEGATIVE_PROMPT,
+          category: undefined
+        },
+        {
+          id: 'size-image',
+          name: '尺寸图',
+          description: '用于生成或优化产品尺寸图',
+          positivePrompt: DEFAULT_POSITIVE_PROMPT,
+          negativePrompt: DEFAULT_NEGATIVE_PROMPT,
+          category: undefined
+        },
+        {
+          id: 'comparison-image',
+          name: '对比图',
+          description: '用于生成或优化产品对比图',
+          positivePrompt: DEFAULT_POSITIVE_PROMPT,
+          negativePrompt: DEFAULT_NEGATIVE_PROMPT,
+          category: undefined
+        },
+        {
+          id: 'scene-image',
+          name: '场景图',
+          description: '用于生成或优化产品场景图',
+          positivePrompt: DEFAULT_POSITIVE_PROMPT,
+          negativePrompt: DEFAULT_NEGATIVE_PROMPT,
+          category: undefined
+        },
+        {
+          id: 'product-title',
+          name: '产品标题',
+          description: '用于优化产品标题',
           positivePrompt: aiTitlePrompt || DEFAULT_POSITIVE_PROMPT,
           negativePrompt: DEFAULT_NEGATIVE_PROMPT,
-          isDefault: true
-        };
-        initialRules = [defaultRule];
-      } else {
-        // 检查是否有默认规则，如果没有，将第一个规则设为默认
-        const hasDefault = initialRules.some(r => r.isDefault);
-        if (!hasDefault && initialRules.length > 0) {
-          initialRules = initialRules.map((r, index) => 
-            index === 0 ? { ...r, isDefault: true } : { ...r, isDefault: false }
-          );
+          category: undefined
         }
+      ];
+      
+      // 如果规则库为空，使用固定规则
+      if (initialRules.length === 0) {
+        initialRules = fixedRules;
+      } else {
+        // 合并固定规则和已有规则，确保固定规则存在
+        const existingIds = new Set(initialRules.map(r => r.id));
+        fixedRules.forEach(fixedRule => {
+          if (!existingIds.has(fixedRule.id)) {
+            initialRules.push(fixedRule);
+          } else {
+            // 如果已存在，更新为固定规则的结构（保留用户自定义的提示词和分类）
+            const existingIndex = initialRules.findIndex(r => r.id === fixedRule.id);
+            if (existingIndex >= 0) {
+              initialRules[existingIndex] = {
+                ...fixedRule,
+                name: initialRules[existingIndex].name || fixedRule.name,
+                positivePrompt: initialRules[existingIndex].positivePrompt || fixedRule.positivePrompt,
+                negativePrompt: initialRules[existingIndex].negativePrompt || fixedRule.negativePrompt,
+                category: initialRules[existingIndex].category
+              };
+            }
+          }
+        });
       }
       
       setRules(initialRules);
       
-      // 找到默认规则
-      const defaultRule = initialRules.find(r => r.isDefault);
-      if (defaultRule) {
-        setDefaultRuleId(defaultRule.id);
-        setEditingRule({ ...defaultRule });
-      } else {
-        setEditingRule(null);
-        setDefaultRuleId(null);
+      // 默认选中第一个规则
+      if (initialRules.length > 0 && !editingRule) {
+        setEditingRule({ ...initialRules[0] });
       }
       
       setIsCreating(false);
@@ -79,22 +250,56 @@ export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps
     }
   }, [open, promptRules, aiTitlePrompt]);
 
-  // 暂时禁用自动保存，避免导致白屏问题
-  // 用户可以通过点击"完成"按钮来保存
-
-  const handleSave = () => {
-    // 保存规则库
-    setPromptRules(rules);
-    
-    // 同步默认规则的正向提示词到 aiTitlePrompt（保持向后兼容）
-    const defaultRule = rules.find(r => r.isDefault);
-    if (defaultRule) {
-      setAITitlePrompt(defaultRule.positivePrompt);
+  // 保存规则到列表和 store（提取为独立函数，供防抖和立即保存使用）
+  const saveRuleToStore = useCallback((rule: PromptRule) => {
+    if (!rule.name.trim()) {
+      return;
     }
     
-    message.success('提示词规则库已保存');
-    onCancel();
-  };
+    setRules(prevRules => {
+      const ruleExists = prevRules.some(r => r.id === rule.id);
+      if (!ruleExists) return prevRules;
+      const updatedRules = prevRules.map(r => r.id === rule.id ? rule : r);
+      
+      // 立即保存到 store（类似 Cursor 的实时保存）
+      setPromptRules(updatedRules);
+      
+      // 同步产品标题分类的规则的正向提示词到 aiTitlePrompt（保持向后兼容）
+      const titleRule = updatedRules.find(r => r.category === 'product-title');
+      if (titleRule) {
+        setAITitlePrompt(titleRule.positivePrompt);
+      }
+      
+      return updatedRules;
+    });
+  }, [setPromptRules, setAITitlePrompt]);
+
+  // 自动保存：当编辑规则时，实时更新到规则列表（参考 Cursor 的自动保存机制）
+  useEffect(() => {
+    if (editingRule && !isCreating) {
+      // 延迟保存，避免频繁更新（类似 Cursor 的防抖机制）
+      const timer = setTimeout(() => {
+        saveRuleToStore(editingRule);
+      }, 300); // 300ms 防抖
+      
+      return () => clearTimeout(timer);
+    }
+  }, [editingRule, isCreating, saveRuleToStore]);
+
+  // 当 rules 变化时（非编辑触发），自动保存到 store
+  useEffect(() => {
+    // 避免在编辑时重复保存（编辑时由上面的 useEffect 处理）
+    if (rules.length > 0 && (!editingRule || isCreating)) {
+      setPromptRules(rules);
+      
+      // 同步产品标题分类的规则的正向提示词到 aiTitlePrompt（保持向后兼容）
+      const titleRule = rules.find(r => r.category === 'product-title');
+      if (titleRule) {
+        setAITitlePrompt(titleRule.positivePrompt);
+      }
+    }
+  }, [rules, editingRule, isCreating, setPromptRules, setAITitlePrompt]);
+
 
   const handleCreate = () => {
     const newRule: PromptRule = {
@@ -103,8 +308,12 @@ export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps
       positivePrompt: DEFAULT_POSITIVE_PROMPT,
       negativePrompt: DEFAULT_NEGATIVE_PROMPT,
       description: '',
-      isDefault: false
+      category: undefined
     };
+    // 立即添加到规则列表
+    const updatedRules = [...rules, newRule];
+    setRules(updatedRules);
+    setPromptRules(updatedRules);
     setEditingRule(newRule);
     setIsCreating(true);
   };
@@ -115,10 +324,9 @@ export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps
   };
 
   const handleDelete = (ruleId: string) => {
-    // 不能删除默认规则
-    const rule = rules.find(r => r.id === ruleId);
-    if (rule?.isDefault) {
-      message.warning('不能删除默认规则');
+    // 不能删除固定规则
+    if (isFixedRule(ruleId)) {
+      message.warning('不能删除固定规则');
       return;
     }
     
@@ -128,23 +336,53 @@ export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps
     }
   };
 
-  const handleSetDefault = (ruleId: string) => {
-    // 取消其他规则的默认状态
-    const updatedRules = rules.map(r => ({
-      ...r,
-      isDefault: r.id === ruleId
-    }));
-    setRules(updatedRules);
-    setDefaultRuleId(ruleId);
+  const handleCategoryChange = (ruleId: string, category: string) => {
+    // 如果选择了分类，先取消该分类下其他规则的分类
+    const updatedRules = category
+      ? rules.map(r => {
+          if (r.id === ruleId) {
+            return { ...r, category };
+          } else if (r.category === category) {
+            // 取消其他规则的分类
+            return { ...r, category: undefined };
+          }
+          return r;
+        })
+      : rules.map(r => r.id === ruleId ? { ...r, category: undefined } : r);
     
-    // 如果正在编辑的规则被设为默认，更新编辑状态
+    setRules(updatedRules);
+    
+    // 更新编辑中的规则
     if (editingRule?.id === ruleId) {
-      setEditingRule({ ...editingRule, isDefault: true });
+      setEditingRule({ ...editingRule, category: category || undefined });
+    }
+    
+    // 自动保存到 store（通过 useEffect 触发）
+  };
+
+  // 检查是否为固定规则
+  const isFixedRule = (ruleId: string) => {
+    const fixedRuleIds = ['main-image', 'sku-image', 'size-image', 'comparison-image', 'scene-image', 'product-title'];
+    return fixedRuleIds.includes(ruleId);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const updatedRules = arrayMove(
+        rules,
+        rules.findIndex((item) => item.id === active.id),
+        rules.findIndex((item) => item.id === over.id)
+      );
+      setRules(updatedRules);
+      // 自动保存到 store（通过 useEffect 触发）
     }
   };
 
-  const handleSaveRule = () => {
-    if (!editingRule) return;
+  // 创建规则完成（当用户点击其他地方或按回车时）
+  const handleCreateComplete = () => {
+    if (!editingRule || !isCreating) return;
     
     // 验证规则名称
     if (!editingRule.name.trim()) {
@@ -152,22 +390,23 @@ export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps
       return;
     }
     
-    if (isCreating) {
-      setRules([...rules, editingRule]);
-      message.success('规则已创建');
-      setEditingRule(null);
-      setIsCreating(false);
-    } else {
-      // 编辑模式下，自动保存已经在 useEffect 中处理
-      // 这里只是关闭编辑状态
-      setEditingRule(null);
-      setIsCreating(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingRule(null);
+    // 更新规则列表中的规则（规则已经在 handleCreate 中添加了，这里只需要更新）
+    setRules(prevRules => {
+      const updatedRules = prevRules.map(r => r.id === editingRule.id ? editingRule : r);
+      setPromptRules(updatedRules);
+      
+      // 同步产品标题分类的规则的正向提示词到 aiTitlePrompt（保持向后兼容）
+      const titleRule = updatedRules.find(r => r.category === 'product-title');
+      if (titleRule) {
+        setAITitlePrompt(titleRule.positivePrompt);
+      }
+      
+      return updatedRules;
+    });
+    
+    message.success('规则已创建');
     setIsCreating(false);
+    // 不清空 editingRule，让用户可以继续编辑
   };
 
   return (
@@ -182,7 +421,7 @@ export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps
                 <div style={{ maxWidth: '400px' }}>
                   <p style={{ margin: '4px 0' }}>管理 AI 提示词规则库。每个规则包含正向提示词和反向提示词。</p>
                   <p style={{ margin: '4px 0' }}><Text strong>正向提示词</Text>：告诉 AI 应该做什么；<Text strong>反向提示词</Text>：告诉 AI 不应该做什么。</p>
-                  <p style={{ margin: '4px 0' }}>请使用 <Text code>{'{title}'}</Text> 作为原标题的占位符。<Text code>默认规则</Text>将用于标题优化功能。</p>
+                  <p style={{ margin: '4px 0' }}>请使用 <Text code>{'{title}'}</Text> 作为原标题的占位符。每个分类只能选择一个规则。</p>
                 </div>
               }
               title="使用说明"
@@ -204,13 +443,12 @@ export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps
       }
       open={open}
       onCancel={onCancel}
-      onOk={handleSave}
-      okText="保存"
-      cancelText="取消"
+      footer={null}
       width={1000}
+      style={{ height: '700px' }}
       centered
       styles={{
-        body: { maxHeight: '75vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }
+        body: { height: '600px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%' }}>
@@ -250,74 +488,32 @@ export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps
                   style={{ marginTop: '40px' }}
                 />
               ) : (
-                <List
-                  dataSource={rules}
-                  renderItem={(rule) => (
-                    <List.Item
-                      style={{
-                        padding: '12px',
-                        cursor: 'pointer',
-                        backgroundColor: editingRule?.id === rule.id ? 'var(--bg-hover)' : 'transparent',
-                        borderRadius: '6px',
-                        marginBottom: '8px',
-                        border: editingRule?.id === rule.id ? '1px solid var(--color-primary)' : '1px solid transparent',
-                        transition: 'all 0.2s'
-                      }}
-                      onClick={() => handleEdit(rule)}
-                      actions={[
-                        <Button
-                          type="text"
-                          icon={rule.isDefault ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
-                          size="small"
-                          title={rule.isDefault ? '默认规则' : '设为默认'}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSetDefault(rule.id);
-                          }}
-                        />,
-                        <Button
-                          type="text"
-                          icon={<EditOutlined />}
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(rule);
-                          }}
-                        />,
-                        <Button
-                          type="text"
-                          danger
-                          icon={<DeleteOutlined />}
-                          size="small"
-                          disabled={rule.isDefault}
-                          title={rule.isDefault ? '不能删除默认规则' : '删除'}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(rule.id);
-                          }}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={rules.map(r => r.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <List
+                      dataSource={rules}
+                      renderItem={(rule) => (
+                        <SortableRuleItem
+                          key={rule.id}
+                          rule={rule}
+                          editingRule={editingRule}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          isFixedRule={isFixedRule}
+                          categories={FIXED_CATEGORIES}
+                          onCategoryChange={handleCategoryChange}
                         />
-                      ]}
-                    >
-                      <List.Item.Meta
-                        title={
-                          <Space>
-                            <Text strong>{rule.name}</Text>
-                            {rule.isDefault && (
-                              <Tag color="gold" icon={<StarFilled />} style={{ margin: 0 }}>
-                                默认
-                              </Tag>
-                            )}
-                          </Space>
-                        }
-                        description={
-                          <Text type="secondary" style={{ fontSize: '12px' }} ellipsis={{ tooltip: rule.description || '无描述' }}>
-                            {rule.description || '无描述'}
-                          </Text>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
+                      )}
+                    />
+                  </SortableContext>
+                </DndContext>
               )}
             </div>
           </div>
@@ -325,103 +521,141 @@ export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps
           {/* 右侧：编辑区域 */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
             {editingRule ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', overflow: 'auto' }}>
-                <div>
-                  <Text strong style={{ display: 'block', marginBottom: '8px' }}>规则名称：</Text>
-                  <Input
-                    value={editingRule.name}
-                    onChange={(e) => setEditingRule({ ...editingRule, name: e.target.value })}
-                    placeholder="请输入规则名称"
-                  />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', height: '100%', overflow: 'hidden' }}>
+                {/* 顶部：规则名称和分类，紧凑布局 */}
+                <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
+                  <div style={{ flex: 1 }}>
+                    <Text strong style={{ display: 'block', marginBottom: '4px', fontSize: '13px' }}>规则名称：</Text>
+                    <Input
+                      value={editingRule.name}
+                      onChange={(e) => setEditingRule({ ...editingRule, name: e.target.value })}
+                      onBlur={() => {
+                        if (isCreating && editingRule.name.trim()) {
+                          // 创建模式下，失去焦点时自动完成创建
+                          handleCreateComplete();
+                        } else if (!isCreating) {
+                          // 编辑模式下，失去焦点时立即保存
+                          saveRuleToStore(editingRule);
+                        }
+                      }}
+                      onPressEnter={() => {
+                        // 创建模式下，按回车键完成创建
+                        if (isCreating && editingRule.name.trim()) {
+                          handleCreateComplete();
+                        }
+                      }}
+                      placeholder="请输入规则名称"
+                      size="small"
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <Text strong style={{ display: 'block', marginBottom: '4px', fontSize: '13px' }}>规则分类：</Text>
+                    <Select
+                      value={editingRule.category || undefined}
+                      onChange={(value) => {
+                        const newCategory = value || undefined;
+                        handleCategoryChange(editingRule.id, newCategory || '');
+                        setEditingRule({ ...editingRule, category: newCategory });
+                      }}
+                      onBlur={() => {
+                        // 失去焦点时立即保存
+                        if (!isCreating) {
+                          saveRuleToStore(editingRule);
+                        }
+                      }}
+                      placeholder="选择分类（可选）"
+                      style={{ width: '100%' }}
+                      size="small"
+                      allowClear
+                    >
+                      {FIXED_CATEGORIES.map(cat => (
+                        <Option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
 
-                <div>
-                  <Text strong style={{ display: 'block', marginBottom: '8px' }}>规则描述：</Text>
-                  <Input
-                    value={editingRule.description || ''}
-                    onChange={(e) => setEditingRule({ ...editingRule, description: e.target.value })}
-                    placeholder="请输入规则描述（可选）"
-                  />
+                {/* 提示词输入区域，占据剩余空间 */}
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}>
+                  {/* 正向提示词 */}
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '8px', 
+                    flex: 1,
+                    minHeight: 0,
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                      <Text strong style={{ fontSize: '13px' }}>正向提示词：</Text>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={() => setEditingRule({ ...editingRule, positivePrompt: DEFAULT_POSITIVE_PROMPT })}
+                      >
+                        恢复默认
+                      </Button>
+                    </div>
+                    <TextArea
+                      value={editingRule.positivePrompt}
+                      onChange={(e) => setEditingRule({ ...editingRule, positivePrompt: e.target.value })}
+                      onBlur={() => {
+                        // 失去焦点时立即保存
+                        if (!isCreating) {
+                          saveRuleToStore(editingRule);
+                        }
+                      }}
+                      placeholder="请输入正向提示词..."
+                      style={{ 
+                        flex: 1, 
+                        overflowY: 'auto', 
+                        resize: 'none', 
+                        minHeight: 0
+                      }}
+                    />
+                  </div>
+
+                  {/* 反向提示词 */}
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '8px', 
+                    flex: 1,
+                    minHeight: 0,
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                      <Text strong style={{ fontSize: '13px' }}>反向提示词：</Text>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={() => setEditingRule({ ...editingRule, negativePrompt: DEFAULT_NEGATIVE_PROMPT })}
+                      >
+                        恢复默认
+                      </Button>
+                    </div>
+                    <TextArea
+                      value={editingRule.negativePrompt}
+                      onChange={(e) => setEditingRule({ ...editingRule, negativePrompt: e.target.value })}
+                      onBlur={() => {
+                        // 失去焦点时立即保存
+                        if (!isCreating) {
+                          saveRuleToStore(editingRule);
+                        }
+                      }}
+                      placeholder="请输入反向提示词..."
+                      style={{ 
+                        flex: 1, 
+                        overflowY: 'auto', 
+                        resize: 'none', 
+                        minHeight: 0
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                  <Tabs
-                    items={[
-                      {
-                        key: 'positive',
-                        label: '正向提示词',
-                        children: (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text strong>正向提示词：</Text>
-                              <Button
-                                type="link"
-                                size="small"
-                                onClick={() => setEditingRule({ ...editingRule, positivePrompt: DEFAULT_POSITIVE_PROMPT })}
-                              >
-                                恢复默认
-                              </Button>
-                            </div>
-                            <TextArea
-                              value={editingRule.positivePrompt}
-                              onChange={(e) => setEditingRule({ ...editingRule, positivePrompt: e.target.value })}
-                              autoSize={{ minRows: 8, maxRows: 20 }}
-                              placeholder="请输入正向提示词..."
-                              style={{ flex: 1 }}
-                            />
-                            <Text type="secondary" style={{ fontSize: '12px' }}>
-                              告诉 AI 应该做什么，期望的输出格式和内容。修改后会自动保存。
-                            </Text>
-                          </div>
-                        )
-                      },
-                      {
-                        key: 'negative',
-                        label: '反向提示词',
-                        children: (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text strong>反向提示词：</Text>
-                              <Button
-                                type="link"
-                                size="small"
-                                onClick={() => setEditingRule({ ...editingRule, negativePrompt: DEFAULT_NEGATIVE_PROMPT })}
-                              >
-                                恢复默认
-                              </Button>
-                            </div>
-                            <TextArea
-                              value={editingRule.negativePrompt}
-                              onChange={(e) => setEditingRule({ ...editingRule, negativePrompt: e.target.value })}
-                              autoSize={{ minRows: 6, maxRows: 15 }}
-                              placeholder="请输入反向提示词..."
-                              style={{ flex: 1 }}
-                            />
-                            <Text type="secondary" style={{ fontSize: '12px' }}>
-                              告诉 AI 不应该做什么，避免的输出格式和内容。
-                            </Text>
-                          </div>
-                        )
-                      }
-                    ]}
-                    defaultActiveKey="positive"
-                    style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
-                  />
-                </div>
-
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '8px', 
-                  justifyContent: 'flex-end',
-                  paddingTop: '8px',
-                  borderTop: '1px solid var(--border-color)',
-                  flexShrink: 0
-                }}>
-                  <Button onClick={handleCancelEdit}>取消</Button>
-                  <Button type="primary" onClick={handleSaveRule}>
-                    {isCreating ? '创建' : '保存'}
-                  </Button>
-                </div>
               </div>
             ) : (
               <div style={{ 

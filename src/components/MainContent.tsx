@@ -1386,15 +1386,13 @@ export function MainContent({ panelId }: MainContentProps = {}) {
     
     setOptimizingTitle(true);
     try {
-      // 优先使用规则库中的默认规则
-      const defaultRule = promptRules?.find(r => r.isDefault);
+      // 优先使用规则库中产品标题分类的规则
+      const titleRule = promptRules?.find(r => r.category === 'product-title');
       let prompt = '';
       
-      if (defaultRule) {
-        // 使用默认规则的正向提示词
-        prompt = defaultRule.positivePrompt.replace('{title}', currentTitle);
-        // 如果有反向提示词，可以附加到提示中（根据 AI 服务支持情况）
-        // 这里先只使用正向提示词
+      if (titleRule) {
+        // 使用产品标题分类规则的正向提示词
+        prompt = titleRule.positivePrompt.replace('{title}', currentTitle);
       } else {
         // 回退到旧的 aiTitlePrompt（保持向后兼容）
         prompt = aiTitlePrompt.replace('{title}', currentTitle);
