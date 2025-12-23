@@ -80,9 +80,10 @@ function SortableRuleItem({
     isDragging
   } = useSortable({ id: rule.id });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+  const style: React.CSSProperties = {
+    // 只在真正拖拽时才应用 transform，避免点击时的任何变换
+    transform: isDragging && transform ? CSS.Transform.toString(transform) : undefined,
+    transition: isDragging ? transition : undefined,
     opacity: isDragging ? 0.5 : 1
   };
 
@@ -95,8 +96,9 @@ function SortableRuleItem({
           backgroundColor: editingRule?.id === rule.id ? 'var(--bg-hover)' : 'transparent',
           borderRadius: '6px',
           marginBottom: '8px',
-          border: editingRule?.id === rule.id ? '1px solid var(--color-primary)' : '1px solid transparent',
-          transition: 'all 0.2s'
+          border: '1px solid transparent', // 固定 border，避免选中时变化
+          boxSizing: 'border-box',
+          transition: 'background-color 0.2s' // 只过渡背景色
         }}
         onClick={() => onEdit(rule)}
         actions={[
@@ -147,7 +149,11 @@ export function PromptLibraryDialog({ open, onCancel }: PromptLibraryDialogProps
   const [isCreating, setIsCreating] = useState(false);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // 需要移动 5px 才激活拖拽，防止点击时触发任何变换
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
