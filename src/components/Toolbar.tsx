@@ -31,12 +31,12 @@ export function Toolbar({ onNewProduct }: ToolbarProps) {
       borderBottom: '1px solid var(--border-color)',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'space-between',
       gap: '16px',
-      flexShrink: 0
+      flexShrink: 0,
+      position: 'relative'
     }}>
       {/* 左侧操作按钮 */}
-      <Space size="small">
+      <Space size="small" style={{ flexShrink: 0 }}>
         {/* 前进后退按钮 */}
         <Space size={4}>
           <Tooltip title="后退 (Alt + ←)">
@@ -72,14 +72,6 @@ export function Toolbar({ onNewProduct }: ToolbarProps) {
           margin: '0 4px'
         }} />
 
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={onNewProduct}
-        >
-          新建产品
-        </Button>
-
         <Tooltip title="排序方式">
           <Button
             icon={<SortAscendingOutlined />}
@@ -90,18 +82,36 @@ export function Toolbar({ onNewProduct }: ToolbarProps) {
         </Tooltip>
       </Space>
 
-      {/* 中间搜索框 */}
-      <Input
-        placeholder="搜索产品..."
-        prefix={<SearchOutlined />}
-        value={searchKeyword}
-        onChange={(e) => setSearchKeyword(e.target.value)}
-        allowClear
-        style={{ 
-          maxWidth: '400px',
-          flex: 1
-        }}
-      />
+      {/* 中间搜索框 - 居中显示 */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <Input
+          placeholder="搜索产品..."
+          prefix={<SearchOutlined />}
+          value={searchKeyword}
+          onChange={(e) => setSearchKeyword(e.target.value)}
+          allowClear
+          style={{ 
+            maxWidth: '400px',
+            width: '100%'
+          }}
+        />
+      </div>
+
+      {/* 右侧新建产品按钮 */}
+      <div style={{ flexShrink: 0 }}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={onNewProduct}
+        >
+          新建产品
+        </Button>
+      </div>
     </div>
   );
 }
