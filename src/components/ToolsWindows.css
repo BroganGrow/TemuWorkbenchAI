@@ -1,0 +1,28 @@
+.tools-windows-container {
+  /* 工具窗口容器样式 */
+  background: var(--bg-secondary);
+}
+
+.tools-windows-container * {
+  box-sizing: border-box;
+}
+
+/* 工具图标栏样式 */
+.tools-icons-bar .ant-btn {
+  transition: all 0.2s;
+}
+
+.tools-icons-bar .ant-btn:hover {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 工具窗口面板样式 */
+.tool-window-panel {
+  transition: flex 0.2s;
+}
+
+.tools-windows-resize-handle:hover {
+  background: #fd7a45 !important;
+}
+

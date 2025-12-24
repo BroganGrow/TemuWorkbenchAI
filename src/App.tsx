@@ -20,6 +20,7 @@ import { PromptLibraryDialog } from './components/PromptLibraryDialog';
 import { SettingsDialog } from './components/SettingsDialog';
 import { ExperimentLab } from './components/ExperimentLab';
 import { ResizableSider } from './components/ResizableSider';
+import { ToolWindowContainer } from './components/ToolWindowContainer';
 import { useAppStore } from './store/appStore';
 import { isStandardWorkspace, initWorkspace } from './utils/workspaceInit';
 import { loadAllProducts } from './utils/productLoader';
@@ -395,27 +396,45 @@ function App() {
                   <Toolbar
                     onNewProduct={() => setNewProductDialogOpen(true)}
                   />
-                  {/* 如果有拆分布局，显示拆分视图；否则显示默认的单面板 */}
-                  {splitLayout && splitPanels.length > 0 ? (
-                    <Content style={{
-                      overflow: 'hidden',
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column'
-                    }} key={`split-view-${refreshKey}`}>
-                      <SplitView />
-                    </Content>
-                  ) : (
-                    <>
-                      <TabBar />
+                  {/* 主内容区域和工具窗口容器 */}
+                  <div style={{
+                    display: 'flex',
+                    flex: 1,
+                    overflow: 'hidden',
+                    minHeight: 0
+                  }}>
+                    {/* 如果有拆分布局，显示拆分视图；否则显示默认的单面板 */}
+                    {splitLayout && splitPanels.length > 0 ? (
                       <Content style={{
                         overflow: 'hidden',
-                        flex: 1
-                      }} key={`main-content-${refreshKey}`}>
-                        <MainContent />
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minWidth: 0
+                      }} key={`split-view-${refreshKey}`}>
+                        <SplitView />
                       </Content>
-                    </>
-                  )}
+                    ) : (
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        flex: 1,
+                        minWidth: 0,
+                        overflow: 'hidden'
+                      }}>
+                        <TabBar />
+                        <Content style={{
+                          overflow: 'hidden',
+                          flex: 1,
+                          minWidth: 0
+                        }} key={`main-content-${refreshKey}`}>
+                          <MainContent />
+                        </Content>
+                      </div>
+                    )}
+                    {/* 右侧工具窗口容器 */}
+                    <ToolWindowContainer />
+                  </div>
                 </>
               )}
             </Layout>

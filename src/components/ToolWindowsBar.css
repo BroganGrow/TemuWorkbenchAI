@@ -1,0 +1,9 @@
+.tool-windows-bar .ant-btn {
+  transition: all 0.2s;
+}
+
+.tool-windows-bar .ant-btn:hover {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+

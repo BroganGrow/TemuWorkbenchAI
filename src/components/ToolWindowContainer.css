@@ -1,0 +1,16 @@
+.tool-window-container {
+  background: var(--bg-secondary);
+}
+
+.tool-window-container * {
+  box-sizing: border-box;
+}
+
+.tool-window-panel {
+  transition: flex 0.2s;
+}
+
+.tool-window-resize-handle:hover {
+  background: #fd7a45 !important;
+}
+

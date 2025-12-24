@@ -267,6 +267,12 @@ export interface AppState {
   
   // 文件选择管理
   setSelectedFileCount: (count: number) => void;
+  
+  // 工具窗口管理（Android Studio 风格）
+  toolWindowsWidth: number; // 工具窗口宽度
+  activeToolWindowId: string | null; // 当前活动的工具窗口 ID（互斥，只有一个）
+  setToolWindowsWidth: (width: number) => void;
+  toggleToolWindow: (id: string) => void; // 切换工具窗口：如果已打开则关闭，否则打开
 }
 
 export const useAppStore = create<AppState>()(
@@ -293,6 +299,10 @@ export const useAppStore = create<AppState>()(
       splitLayout: null,
       activePanelId: null,
       selectedFileCount: 0,
+      
+      // 工具窗口状态
+      toolWindowsWidth: 300,
+      activeToolWindowId: null,
       
       // 默认 AI 模型配置
       aiModels: DEFAULT_AI_MODELS,
@@ -895,7 +905,18 @@ export const useAppStore = create<AppState>()(
       },
 
       // 设置选中的文件数量
-      setSelectedFileCount: (count) => set({ selectedFileCount: count })
+      setSelectedFileCount: (count) => set({ selectedFileCount: count }),
+      
+      // 工具窗口 Actions
+      setToolWindowsWidth: (width) => set({ toolWindowsWidth: width }),
+      toggleToolWindow: (id) => set((state) => {
+        // 如果点击的是当前活动的窗口，则关闭；否则切换到新窗口
+        if (state.activeToolWindowId === id) {
+          return { activeToolWindowId: null };
+        } else {
+          return { activeToolWindowId: id };
+        }
+      })
     }),
     {
       name: 'super-tools-storage',
